@@ -172,3 +172,4 @@ roosevelt-ops/
 ---
 
 *Last Updated: 2026-02-05*
+Test metrics collection
