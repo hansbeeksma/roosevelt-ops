@@ -93,7 +93,7 @@ jobs:
           # Push to Supabase
           curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/dora_metrics" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
             -d "$PAYLOAD"
