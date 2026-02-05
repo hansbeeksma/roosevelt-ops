@@ -1,0 +1,336 @@
+name: Metrics Alert Checks
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  check-dora-alerts:
+    name: Check DORA Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Deployment Frequency
+        id: deploy-freq
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+
+          async function check() {
+            // Get deployments this week
+            const thisWeekStart = new Date();
+            thisWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+            const { data: thisWeek } = await supabase
+              .from('dora_metrics')
+              .select('*')
+              .eq('event_type', 'deployment')
+              .gte('timestamp', thisWeekStart.toISOString());
+
+            // Get deployments last week
+            const lastWeekStart = new Date(thisWeekStart);
+            lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+            const { data: lastWeek } = await supabase
+              .from('dora_metrics')
+              .select('*')
+              .eq('event_type', 'deployment')
+              .gte('timestamp', lastWeekStart.toISOString())
+              .lt('timestamp', thisWeekStart.toISOString());
+
+            const thisWeekCount = thisWeek?.length || 0;
+            const lastWeekCount = lastWeek?.length || 0;
+
+            console.log(\`DEPLOY_THIS_WEEK=\${thisWeekCount}\`);
+            console.log(\`DEPLOY_LAST_WEEK=\${lastWeekCount}\`);
+
+            // Alert if >50% drop
+            if (thisWeekCount < lastWeekCount * 0.5) {
+              const dropPct = ((1 - thisWeekCount/lastWeekCount) * 100).toFixed(0);
+              console.log(\`ALERT_DEPLOY_FREQ=Deployment frequency dropped \${dropPct}% (\${thisWeekCount} vs \${lastWeekCount})\`);
+              console.log('ALERT_SEVERITY=MEDIUM');
+            } else {
+              console.log('ALERT_DEPLOY_FREQ=');
+            }
+          }
+
+          check().catch(console.error);
+          " >> $GITHUB_OUTPUT
+
+      - name: Check Lead Time
+        id: lead-time
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+
+          async function check() {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            // Current lead time (7 days)
+            const { data: recent } = await supabase
+              .from('dora_metrics')
+              .select('lead_time_hours')
+              .gte('timestamp', sevenDaysAgo.toISOString())
+              .not('lead_time_hours', 'is', null);
+
+            // Baseline (30 days)
+            const { data: baseline } = await supabase
+              .from('dora_metrics')
+              .select('lead_time_hours')
+              .gte('timestamp', thirtyDaysAgo.toISOString())
+              .not('lead_time_hours', 'is', null);
+
+            const avgRecent = recent?.reduce((sum, r) => sum + r.lead_time_hours, 0) / (recent?.length || 1);
+            const avgBaseline = baseline?.reduce((sum, r) => sum + r.lead_time_hours, 0) / (baseline?.length || 1);
+
+            console.log(\`LEAD_TIME_CURRENT=\${avgRecent.toFixed(1)}\`);
+            console.log(\`LEAD_TIME_BASELINE=\${avgBaseline.toFixed(1)}\`);
+
+            // Alert if >2x baseline
+            if (avgRecent > avgBaseline * 2) {
+              const multiplier = (avgRecent / avgBaseline).toFixed(1);
+              console.log(\`ALERT_LEAD_TIME=Lead time \${multiplier}x baseline (\${avgRecent.toFixed(1)}h vs \${avgBaseline.toFixed(1)}h)\`);
+              console.log('ALERT_SEVERITY=HIGH');
+            } else if (avgRecent > 48) {
+              console.log(\`ALERT_LEAD_TIME=Lead time exceeds 48h threshold (\${avgRecent.toFixed(1)}h)\`);
+              console.log('ALERT_SEVERITY=MEDIUM');
+            } else {
+              console.log('ALERT_LEAD_TIME=');
+            }
+          }
+
+          check().catch(console.error);
+          " >> $GITHUB_OUTPUT
+
+      - name: Check Change Failure Rate
+        id: cfr
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+
+          async function check() {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            const { data: deployments } = await supabase
+              .from('dora_metrics')
+              .select('deployment_failed')
+              .in('event_type', ['deployment', 'push'])
+              .gte('timestamp', sevenDaysAgo.toISOString());
+
+            const totalDeployments = deployments?.length || 0;
+            const failedDeployments = deployments?.filter(d => d.deployment_failed).length || 0;
+            const cfr = totalDeployments > 0 ? (failedDeployments / totalDeployments * 100) : 0;
+
+            console.log(\`CFR=\${cfr.toFixed(1)}\`);
+            console.log(\`TOTAL_DEPLOYMENTS=\${totalDeployments}\`);
+            console.log(\`FAILED_DEPLOYMENTS=\${failedDeployments}\`);
+
+            // Alert if CFR >25%
+            if (cfr > 25 && totalDeployments >= 5) {
+              console.log(\`ALERT_CFR=Change failure rate at \${cfr.toFixed(1)}% (\${failedDeployments}/\${totalDeployments} deployments)\`);
+              console.log('ALERT_SEVERITY=CRITICAL');
+            } else if (cfr > 15) {
+              console.log(\`ALERT_CFR=Change failure rate \${cfr.toFixed(1)}% exceeds Elite threshold (<15%)\`);
+              console.log('ALERT_SEVERITY=MEDIUM');
+            } else {
+              console.log('ALERT_CFR=');
+            }
+          }
+
+          check().catch(console.error);
+          " >> $GITHUB_OUTPUT
+
+      - name: Check MTTR
+        id: mttr
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+
+          async function check() {
+            // Check for open critical incidents >1h
+            const oneHourAgo = new Date();
+            oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+
+            const { data: openIncidents } = await supabase
+              .from('incidents')
+              .select('*')
+              .eq('status', 'open')
+              .eq('severity', 'critical')
+              .lt('created_at_github', oneHourAgo.toISOString());
+
+            if (openIncidents && openIncidents.length > 0) {
+              const incident = openIncidents[0];
+              const openHours = ((Date.now() - new Date(incident.created_at_github)) / 3600000).toFixed(1);
+              console.log(\`ALERT_MTTR=Critical incident #\${incident.issue_number} open \${openHours}h (target: <1h)\`);
+              console.log('ALERT_SEVERITY=CRITICAL');
+              return;
+            }
+
+            // Check average MTTR for resolved incidents
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            const { data: resolved } = await supabase
+              .from('incidents')
+              .select('mttr_hours')
+              .eq('status', 'closed')
+              .gte('created_at_github', sevenDaysAgo.toISOString())
+              .not('mttr_hours', 'is', null);
+
+            const avgMTTR = resolved?.reduce((sum, r) => sum + r.mttr_hours, 0) / (resolved?.length || 1);
+
+            console.log(\`AVG_MTTR=\${avgMTTR.toFixed(1)}\`);
+
+            if (avgMTTR > 1) {
+              console.log(\`ALERT_MTTR=Average MTTR \${avgMTTR.toFixed(1)}h exceeds 1h target\`);
+              console.log('ALERT_SEVERITY=HIGH');
+            } else {
+              console.log('ALERT_MTTR=');
+            }
+          }
+
+          check().catch(console.error);
+          " >> $GITHUB_OUTPUT
+
+      - name: Send Slack Alerts
+        if: steps.deploy-freq.outputs.ALERT_DEPLOY_FREQ != '' || steps.lead-time.outputs.ALERT_LEAD_TIME != '' || steps.cfr.outputs.ALERT_CFR != '' || steps.mttr.outputs.ALERT_MTTR != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          ALERTS=""
+
+          if [ -n "${{ steps.deploy-freq.outputs.ALERT_DEPLOY_FREQ }}" ]; then
+            ALERTS="$ALERTS\n• ⚠️ ${{ steps.deploy-freq.outputs.ALERT_DEPLOY_FREQ }}"
+          fi
+
+          if [ -n "${{ steps.lead-time.outputs.ALERT_LEAD_TIME }}" ]; then
+            ALERTS="$ALERTS\n• ⚠️ ${{ steps.lead-time.outputs.ALERT_LEAD_TIME }}"
+          fi
+
+          if [ -n "${{ steps.cfr.outputs.ALERT_CFR }}" ]; then
+            ALERTS="$ALERTS\n• 🚨 ${{ steps.cfr.outputs.ALERT_CFR }}"
+          fi
+
+          if [ -n "${{ steps.mttr.outputs.ALERT_MTTR }}" ]; then
+            ALERTS="$ALERTS\n• 🚨 ${{ steps.mttr.outputs.ALERT_MTTR }}"
+          fi
+
+          curl -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"blocks\": [
+                {
+                  \"type\": \"header\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"📊 Engineering Metrics Alerts\"
+                  }
+                },
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"$ALERTS\"
+                  }
+                },
+                {
+                  \"type\": \"actions\",
+                  \"elements\": [
+                    {
+                      \"type\": \"button\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"View Dashboard\"
+                      },
+                      \"url\": \"https://roosevelt-ops.vercel.app\"
+                    }
+                  ]
+                }
+              ]
+            }"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Metrics Alert Summary 📊" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Last checked:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "#### DORA Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ steps.deploy-freq.outputs.ALERT_DEPLOY_FREQ }}" ]; then
+            echo "| Deployment Frequency | ⚠️ Alert | ${{ steps.deploy-freq.outputs.ALERT_DEPLOY_FREQ }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Deployment Frequency | ✅ OK | This week: ${{ steps.deploy-freq.outputs.DEPLOY_THIS_WEEK }}, Last week: ${{ steps.deploy-freq.outputs.DEPLOY_LAST_WEEK }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "${{ steps.lead-time.outputs.ALERT_LEAD_TIME }}" ]; then
+            echo "| Lead Time | ⚠️ Alert | ${{ steps.lead-time.outputs.ALERT_LEAD_TIME }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Lead Time | ✅ OK | Current: ${{ steps.lead-time.outputs.LEAD_TIME_CURRENT }}h, Baseline: ${{ steps.lead-time.outputs.LEAD_TIME_BASELINE }}h |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "${{ steps.cfr.outputs.ALERT_CFR }}" ]; then
+            echo "| Change Failure Rate | 🚨 Alert | ${{ steps.cfr.outputs.ALERT_CFR }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Change Failure Rate | ✅ OK | ${{ steps.cfr.outputs.CFR }}% (${{ steps.cfr.outputs.FAILED_DEPLOYMENTS }}/${{ steps.cfr.outputs.TOTAL_DEPLOYMENTS }}) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "${{ steps.mttr.outputs.ALERT_MTTR }}" ]; then
+            echo "| MTTR | 🚨 Alert | ${{ steps.mttr.outputs.ALERT_MTTR }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| MTTR | ✅ OK | Average: ${{ steps.mttr.outputs.AVG_MTTR }}h |" >> $GITHUB_STEP_SUMMARY
+          fi
