@@ -1,0 +1,91 @@
+name: DORA MTTR Tracking
+
+on:
+  issues:
+    types: [labeled, closed]
+
+jobs:
+  track-mttr:
+    # Only run for production incidents
+    if: |
+      contains(github.event.issue.labels.*.name, 'incident') ||
+      contains(github.event.issue.labels.*.name, 'production-bug') ||
+      contains(github.event.issue.labels.*.name, 'p0')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate MTTR
+        if: github.event.action == 'closed'
+        id: mttr
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          CREATED_AT="${{ github.event.issue.created_at }}"
+          CLOSED_AT="${{ github.event.issue.closed_at }}"
+
+          # Calculate recovery time (seconds)
+          MTTR=$(( $(date -d "$CLOSED_AT" +%s) - $(date -d "$CREATED_AT" +%s) ))
+          MTTR_HOURS=$(echo "scale=2; $MTTR / 3600" | bc)
+          MTTR_MINUTES=$(echo "scale=0; $MTTR / 60" | bc)
+
+          echo "mttr_hours=$MTTR_HOURS" >> $GITHUB_OUTPUT
+          echo "mttr_minutes=$MTTR_MINUTES" >> $GITHUB_OUTPUT
+
+          # Determine severity from labels
+          SEVERITY="medium"
+          if echo "${{ join(github.event.issue.labels.*.name, ',') }}" | grep -q "p0"; then
+            SEVERITY="critical"
+          elif echo "${{ join(github.event.issue.labels.*.name, ',') }}" | grep -q "p1"; then
+            SEVERITY="high"
+          fi
+          echo "severity=$SEVERITY" >> $GITHUB_OUTPUT
+
+          echo "🚨 Incident #$ISSUE_NUMBER resolved in $MTTR_HOURS hours ($MTTR_MINUTES minutes)"
+          echo "   Severity: $SEVERITY"
+
+      - name: Record Incident
+        run: |
+          STATUS="${{ github.event.action == 'closed' && 'closed' || 'open' }}"
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "issue_number": ${{ github.event.issue.number }},
+            "title": $(echo '${{ github.event.issue.title }}' | jq -Rs .),
+            "severity": "${{ steps.mttr.outputs.severity || 'medium' }}",
+            "created_at_github": "${{ github.event.issue.created_at }}",
+            "closed_at_github": ${{ github.event.action == 'closed' && format('"{0}"', github.event.issue.closed_at) || 'null' }},
+            "mttr_hours": ${{ steps.mttr.outputs.mttr_hours || 'null' }},
+            "status": "$STATUS",
+            "labels": $(echo '${{ join(github.event.issue.labels.*.name, ',') }}' | jq -Rs 'split(",")'),
+            "repository": "${{ github.repository }}"
+          }
+          EOF
+          )
+
+          curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/incidents" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$PAYLOAD"
+
+          echo "✅ Incident recorded in Supabase"
+
+      - name: Alert on Long MTTR
+        if: |
+          github.event.action == 'closed' &&
+          steps.mttr.outputs.mttr_hours > 24
+        run: |
+          echo "⚠️ MTTR exceeded 24 hours threshold!"
+          echo "   Issue #${{ github.event.issue.number }}: ${{ steps.mttr.outputs.mttr_hours }}h"
+          # TODO: Send Slack alert when configured
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Incident Tracking 🚨" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Issue | [#${{ github.event.issue.number }}](${{ github.event.issue.html_url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ github.event.action == 'closed' && '✅ Resolved' || '🔴 Open' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| MTTR | ${{ steps.mttr.outputs.mttr_hours && format('{0}h ({1}m)', steps.mttr.outputs.mttr_hours, steps.mttr.outputs.mttr_minutes) || '➖ In progress' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | ${{ steps.mttr.outputs.severity || '➖' }} |" >> $GITHUB_STEP_SUMMARY

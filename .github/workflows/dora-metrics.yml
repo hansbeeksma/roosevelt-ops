@@ -1,0 +1,113 @@
+name: DORA Metrics Collection
+
+on:
+  push:
+    branches: [main, production]
+  deployment:
+  pull_request:
+    types: [closed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  collect-dora-metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for lead time calculation
+
+      - name: Calculate Deployment Frequency
+        if: github.event_name == 'deployment' || github.event_name == 'push'
+        id: deploy-freq
+        run: |
+          DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ENVIRONMENT="${{ github.event.deployment.environment || 'production' }}"
+
+          echo "deployment_timestamp=$DEPLOY_TIME" >> $GITHUB_OUTPUT
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "✅ Deployment recorded: $ENVIRONMENT at $DEPLOY_TIME"
+
+      - name: Calculate Lead Time for Changes
+        if: github.event.pull_request.merged == true
+        id: lead-time
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          MERGE_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Get first commit in PR
+          FIRST_COMMIT=$(gh pr view $PR_NUMBER --json commits --jq '.commits[0].oid')
+          FIRST_COMMIT_TIME=$(git show -s --format=%cI $FIRST_COMMIT)
+
+          # Calculate lead time (seconds)
+          LEAD_TIME=$(( $(date -d "$MERGE_TIME" +%s) - $(date -d "$FIRST_COMMIT_TIME" +%s) ))
+          LEAD_TIME_HOURS=$(echo "scale=2; $LEAD_TIME / 3600" | bc)
+
+          echo "lead_time_hours=$LEAD_TIME_HOURS" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "merge_time=$MERGE_TIME" >> $GITHUB_OUTPUT
+          echo "✅ Lead time calculated: $LEAD_TIME_HOURS hours for PR #$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Calculate Change Failure Rate
+        if: github.event_name == 'deployment' || github.event_name == 'push'
+        id: failure-rate
+        run: |
+          DEPLOY_SHA="${{ github.sha }}"
+          FAILED="false"
+
+          # Check for revert/rollback/hotfix in next 5 commits
+          NEXT_COMMITS=$(git log --oneline $DEPLOY_SHA..HEAD -5 2>/dev/null || echo "")
+          if echo "$NEXT_COMMITS" | grep -iE "(revert|rollback|hotfix)"; then
+            FAILED="true"
+            echo "⚠️ Deployment failure detected (revert/rollback/hotfix found)"
+          else
+            echo "✅ Deployment successful (no failures detected)"
+          fi
+
+          echo "deployment_failed=$FAILED" >> $GITHUB_OUTPUT
+
+      - name: Push Metrics to Supabase
+        if: always()
+        run: |
+          # Prepare metrics payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "event_type": "${{ github.event_name }}",
+            "repository": "${{ github.repository }}",
+            "timestamp": "${{ steps.deploy-freq.outputs.deployment_timestamp || steps.lead-time.outputs.merge_time || github.event.head_commit.timestamp }}",
+            "deployment_frequency": ${{ (github.event_name == 'deployment' || github.event_name == 'push') && '1' || '0' }},
+            "lead_time_hours": ${{ steps.lead-time.outputs.lead_time_hours || 'null' }},
+            "deployment_failed": ${{ steps.failure-rate.outputs.deployment_failed == 'true' && 'true' || 'false' }},
+            "environment": "${{ steps.deploy-freq.outputs.environment || 'unknown' }}",
+            "pr_number": ${{ steps.lead-time.outputs.pr_number || 'null' }},
+            "commit_sha": "${{ github.sha }}",
+            "actor": "${{ github.actor }}"
+          }
+          EOF
+          )
+
+          # Push to Supabase
+          curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/dora_metrics" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$PAYLOAD"
+
+          echo "✅ Metrics pushed to Supabase"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### DORA Metrics Collected 📊" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Event Type | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployment | ${{ (github.event_name == 'deployment' || github.event_name == 'push') && '✅ Yes' || '➖ No' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lead Time | ${{ steps.lead-time.outputs.lead_time_hours && format('{0}h', steps.lead-time.outputs.lead_time_hours) || '➖ N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | ${{ steps.failure-rate.outputs.deployment_failed == 'true' && '⚠️ Yes' || '✅ No' }} |" >> $GITHUB_STEP_SUMMARY
