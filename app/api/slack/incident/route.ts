@@ -13,6 +13,12 @@ import {
   detectAffectedComponents,
   getStatusPageUrl,
 } from '@/lib/integrations/statuspage';
+import {
+  createPlaneIncidentIssue,
+  updatePlaneIncidentIssue,
+  addPlaneIssueComment,
+  getPlaneIssueUrl,
+} from '@/lib/integrations/plane';
 
 // Types
 interface SlackCommandPayload {
@@ -300,10 +306,45 @@ async function handleIncidentStart(
       });
     }
 
-    // Create Plane issue (if configured)
-    if (process.env.PLANE_API_KEY) {
-      // TODO: Implement Plane issue creation
-      // This would use the Plane MCP tools to create an issue
+    // Create Plane issue for incident tracking (if configured)
+    let planeIssueId: string | null = null;
+    const slackChannelUrl = `https://app.slack.com/client/${process.env.SLACK_TEAM_ID}/${incidentChannelId}`;
+    planeIssueId = await createPlaneIncidentIssue(
+      { ...incident, severity: severity as any },
+      slackChannelUrl
+    );
+
+    // Update incident with Plane issue ID if created
+    if (planeIssueId) {
+      await supabase
+        .from('incidents')
+        .update({ plane_issue_id: planeIssueId })
+        .eq('id', incident.id);
+
+      // Post Plane confirmation to channel
+      const planeIssueUrl = getPlaneIssueUrl(planeIssueId);
+      await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        },
+        body: JSON.stringify({
+          channel: incidentChannelId,
+          text: '📋 Plane issue created for tracking',
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: `📋 *Plane issue created* - <${planeIssueUrl}|View in Plane>`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
     }
 
     // Respond to user
@@ -408,6 +449,14 @@ async function handleIncidentUpdate(
         incident.statuspage_incident_id,
         message,
         'identified' // Update status to "identified" when posting updates
+      );
+    }
+
+    // Add comment to Plane issue (if it was created)
+    if (incident.plane_issue_id) {
+      await addPlaneIssueComment(
+        incident.plane_issue_id,
+        `<strong>Status Update</strong><br>${message}<br><em>Posted by ${userName}</em>`
       );
     }
 
@@ -575,6 +624,41 @@ async function handleIncidentResolve(
                   {
                     type: 'mrkdwn',
                     text: `✅ *Public status page updated* - Incident marked as resolved | <${statusPageUrl}|View status page>`,
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+      }
+    }
+
+    // Update Plane issue to Done (if it was created)
+    if (incident.plane_issue_id) {
+      const planeUpdated = await updatePlaneIncidentIssue(
+        incident.plane_issue_id,
+        { ...incident, status: 'resolved', resolved_at: new Date().toISOString() } as any
+      );
+
+      if (planeUpdated) {
+        // Post Plane confirmation to channel
+        const planeIssueUrl = getPlaneIssueUrl(incident.plane_issue_id);
+        await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          },
+          body: JSON.stringify({
+            channel: incident.channel_id,
+            text: '✅ Plane issue marked as Done',
+            blocks: [
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: `✅ *Plane issue updated to Done* - <${planeIssueUrl}|View in Plane>`,
                   },
                 ],
               },
