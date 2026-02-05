@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@/lib/supabase/server';
+import {
+  triggerPagerDutyIncident,
+  resolvePagerDutyIncident,
+  shouldTriggerPagerDuty,
+} from '@/lib/integrations/pagerduty';
 
 // Types
 interface SlackCommandPayload {
@@ -204,6 +209,48 @@ async function handleIncidentStart(
         ],
       }),
     });
+
+    // Trigger PagerDuty alert (SEV-1 and SEV-2 only)
+    let pagerdutyIncidentId: string | null = null;
+    if (shouldTriggerPagerDuty(severity as any)) {
+      const slackChannelUrl = `https://app.slack.com/client/${process.env.SLACK_TEAM_ID}/${incidentChannelId}`;
+      pagerdutyIncidentId = await triggerPagerDutyIncident(
+        { ...incident, severity: severity as any },
+        slackChannelUrl
+      );
+
+      // Update incident with PagerDuty ID if triggered
+      if (pagerdutyIncidentId) {
+        await supabase
+          .from('incidents')
+          .update({ pagerduty_incident_id: pagerdutyIncidentId })
+          .eq('id', incident.id);
+
+        // Post PagerDuty confirmation to channel
+        await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          },
+          body: JSON.stringify({
+            channel: incidentChannelId,
+            text: '📟 PagerDuty alert triggered - on-call engineer has been paged',
+            blocks: [
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: `📟 *PagerDuty alert triggered* - On-call engineer has been paged for ${severity} incident`,
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+      }
+    }
 
     // Create Plane issue (if configured)
     if (process.env.PLANE_API_KEY) {
@@ -413,6 +460,37 @@ async function handleIncidentResolve(
         ],
       }),
     });
+
+    // Resolve PagerDuty incident (if it was triggered)
+    if (incident.pagerduty_incident_id) {
+      const pagerdutyResolved = await resolvePagerDutyIncident(incident.pagerduty_incident_id);
+
+      if (pagerdutyResolved) {
+        // Post PagerDuty confirmation to channel
+        await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          },
+          body: JSON.stringify({
+            channel: incident.channel_id,
+            text: '✅ PagerDuty incident resolved',
+            blocks: [
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: '✅ *PagerDuty incident resolved* - On-call engineer notified',
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+      }
+    }
 
     // Archive channel after 24 hours (schedule job)
     // TODO: Implement channel archival scheduling
