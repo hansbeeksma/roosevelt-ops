@@ -6,6 +6,13 @@ import {
   resolvePagerDutyIncident,
   shouldTriggerPagerDuty,
 } from '@/lib/integrations/pagerduty';
+import {
+  createStatusPageIncident,
+  updateStatusPageIncident,
+  resolveStatusPageIncident,
+  detectAffectedComponents,
+  getStatusPageUrl,
+} from '@/lib/integrations/statuspage';
 
 // Types
 interface SlackCommandPayload {
@@ -252,6 +259,47 @@ async function handleIncidentStart(
       }
     }
 
+    // Update public Status Page (if configured)
+    let statusPageIncidentId: string | null = null;
+    const affectedComponents = await detectAffectedComponents(title);
+    statusPageIncidentId = await createStatusPageIncident(
+      { ...incident, severity: severity as any },
+      affectedComponents
+    );
+
+    // Update incident with Status Page ID if created
+    if (statusPageIncidentId) {
+      await supabase
+        .from('incidents')
+        .update({ statuspage_incident_id: statusPageIncidentId })
+        .eq('id', incident.id);
+
+      // Post Status Page confirmation to channel
+      const statusPageUrl = getStatusPageUrl(statusPageIncidentId);
+      await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        },
+        body: JSON.stringify({
+          channel: incidentChannelId,
+          text: '📢 Public status page updated',
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: `📢 *Public status page updated* - <${statusPageUrl}|View status page>`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+    }
+
     // Create Plane issue (if configured)
     if (process.env.PLANE_API_KEY) {
       // TODO: Implement Plane issue creation
@@ -353,6 +401,15 @@ async function handleIncidentUpdate(
         ],
       }),
     });
+
+    // Update Status Page (if it was created)
+    if (incident.statuspage_incident_id) {
+      await updateStatusPageIncident(
+        incident.statuspage_incident_id,
+        message,
+        'identified' // Update status to "identified" when posting updates
+      );
+    }
 
     return NextResponse.json({
       response_type: 'ephemeral',
@@ -483,6 +540,41 @@ async function handleIncidentResolve(
                   {
                     type: 'mrkdwn',
                     text: '✅ *PagerDuty incident resolved* - On-call engineer notified',
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+      }
+    }
+
+    // Resolve Status Page incident (if it was created)
+    if (incident.statuspage_incident_id) {
+      const statusPageResolved = await resolveStatusPageIncident(
+        incident.statuspage_incident_id,
+        `This incident has been resolved. Duration: ${calculateDuration(incident.started_at, new Date().toISOString())}`
+      );
+
+      if (statusPageResolved) {
+        // Post Status Page confirmation to channel
+        const statusPageUrl = getStatusPageUrl(incident.statuspage_incident_id);
+        await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          },
+          body: JSON.stringify({
+            channel: incident.channel_id,
+            text: '✅ Public status page updated - marked as resolved',
+            blocks: [
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: `✅ *Public status page updated* - Incident marked as resolved | <${statusPageUrl}|View status page>`,
                   },
                 ],
               },

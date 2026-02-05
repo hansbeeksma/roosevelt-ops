@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.incidents (
   channel_id TEXT NOT NULL, -- Slack channel ID
   plane_issue_id TEXT, -- Plane issue UUID
   pagerduty_incident_id TEXT, -- PagerDuty incident ID
+  statuspage_incident_id TEXT, -- Statuspage.io incident ID
 
   -- Timeline
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

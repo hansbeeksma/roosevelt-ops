@@ -26,6 +26,7 @@ export interface Incident {
   channel_id: string; // Slack channel ID
   plane_issue_id: string | null; // Plane issue UUID
   pagerduty_incident_id: string | null; // PagerDuty incident ID
+  statuspage_incident_id: string | null; // Statuspage.io incident ID
 
   // Timeline
   started_at: string; // ISO timestamp
@@ -62,6 +63,7 @@ export interface UpdateIncidentInput {
   responders?: string[];
   plane_issue_id?: string;
   pagerduty_incident_id?: string;
+  statuspage_incident_id?: string;
   resolved_at?: string;
 }
 
