@@ -9,6 +9,24 @@ Operations hub voor Roosevelt - Professionele onderneming voor AI strategie en D
 **Founder:** Sam Swaab
 **Focus:** AI Strategy & Digital Product Development
 
+## 🚀 Quick Start
+
+```bash
+git clone https://github.com/hansbeeksma/roosevelt-ops.git
+cd roosevelt-ops
+npm install
+supabase start
+npm run dev
+```
+
+Open http://localhost:3000 - Dashboard draait met sample data!
+
+**📚 Documentatie:**
+- [Setup Guide](docs/SETUP.md) - Lokale development setup
+- [Deployment Guide](DEPLOYMENT.md) - Cloud deployment naar Vercel + Supabase
+
+---
+
 ## Engineering Metrics Dashboard (ROOSE-29)
 
 DORA + SPACE metrics implementatie voor engineering performance tracking.
