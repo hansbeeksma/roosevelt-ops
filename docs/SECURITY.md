@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-95 (Misconfig)
-> **Version:** 1.3.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig)
+> **Version:** 1.4.0
 
 ## Pre-Commit Secret Scanning
 
@@ -564,6 +564,121 @@ Complete misconfiguration guide: `docs/SECURITY-CONFIG.md`
 - Security Headers: https://securityheaders.com/
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Dynamic Application Security Testing (DAST)
+
+**Runtime security testing** of deployed applications using OWASP ZAP.
+
+### What is DAST
+
+DAST tests **running applications** by:
+- Sending HTTP requests to deployed app
+- Analyzing responses for vulnerabilities
+- Testing authentication flows
+- Scanning API endpoints
+
+**Difference from SAST**:
+- SAST: Analyzes source code (white-box)
+- DAST: Tests running app (black-box)
+
+**OWASP 2025 Coverage**:
+- A01: Broken Access Control
+- A02: Security Misconfiguration
+- A05: Injection (SQL, XSS, etc.)
+
+### Quick Start
+
+**GitHub Actions (Recommended)**:
+```bash
+# 1. Deploy to Vercel preview
+git push origin feature/my-branch
+
+# 2. Trigger DAST scan
+gh workflow run dast-scan.yml \
+  -f target_url=https://roosevelt-ops-abc123.vercel.app \
+  -f scan_type=baseline
+
+# 3. Check results
+gh run list --workflow=dast-scan.yml
+```
+
+**Local ZAP Desktop**:
+```bash
+brew install --cask owasp-zap
+npm run dev
+# Open ZAP Desktop → Manual Explore: http://localhost:3000
+```
+
+### Scan Types
+
+| Type | Duration | Use Case |
+|------|----------|----------|
+| **Baseline** | 2-5 min | PR validation, quick checks |
+| **Full** | 30-60 min | Pre-production, thorough analysis |
+
+### When to Run
+
+- ✅ After Vercel preview deployment (before merge)
+- ✅ Weekly on production (Sunday 2 AM)
+- ✅ Before major releases
+- ✅ After security-sensitive changes
+
+### Results
+
+Findings appear in:
+1. **GitHub Issues** (auto-created)
+2. **GitHub Security tab** (SARIF format)
+3. **Workflow Artifacts** (HTML/JSON/Markdown reports)
+
+**Severity Response**:
+| Level | Action |
+|-------|--------|
+| **High** | Fix immediately, blocks PR |
+| **Medium** | Fix before merge |
+| **Low** | Fix when possible |
+| **Informational** | Review, may ignore |
+
+### Common Findings
+
+**Missing Security Headers**:
+- Already implemented in `next.config.js` (ROOSE-95)
+- Verify in deployed app via `curl -I`
+
+**Cookie Security**:
+- Ensure production uses HTTPS (Vercel default)
+
+**XSS Vulnerabilities**:
+- Sanitize user input
+- Use CSP headers (configured)
+
+### Best Practices
+
+**DO**:
+- ✅ Scan preview deployments before merge
+- ✅ Run full scans weekly on production
+- ✅ Review all High/Medium findings
+- ✅ Update `.zap/rules.tsv` based on findings
+
+**DON'T**:
+- ❌ Scan production during business hours
+- ❌ Ignore Medium severity findings
+- ❌ Run full scans on every commit (too slow)
+
+### Full Documentation
+
+Complete DAST guide: `docs/DAST-GUIDE.md`
+- GitHub Actions workflow details
+- Local ZAP usage
+- Authenticated scanning
+- Result interpretation
+- Integration with Vercel
+
+### Related
+
+- OWASP ZAP: https://www.zaproxy.org/
+- ZAP GitHub Actions: https://github.com/zaproxy/action-baseline
+- DAST Guide: `docs/DAST-GUIDE.md`
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -575,6 +690,6 @@ Instead:
 
 ---
 
-**Version:** 1.3.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-95)
+**Version:** 1.4.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team
