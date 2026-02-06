@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling)
-> **Version:** 1.5.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling), ROOSE-97 (Security Champions)
+> **Version:** 1.6.0
 
 ## Pre-Commit Secret Scanning
 
@@ -813,6 +813,118 @@ Complete error handling guide: `docs/ERROR-HANDLING.md`
 - RFC 7807 Problem Details: https://www.rfc-editor.org/rfc/rfc7807
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Security Champions Program
+
+**Embed security expertise** in development teams through peer-led education and collaborative security reviews.
+
+### Overview
+
+**Security Champions** zijn developers die security ownership nemen binnen hun teams en fungeren als brug tussen security team en development.
+
+**Benefits**:
+- Shift-left security (catch issues earlier)
+- Knowledge sharing (security expertise spreads)
+- Faster security reviews (embedded expertise)
+- Better security culture (ownership mindset)
+
+### Responsibilities
+
+**Security Champions:**
+- ✅ Monthly security training attendance
+- ✅ Peer security reviews for PRs
+- ✅ Advocate for security best practices
+- ✅ Escalate security concerns
+- ✅ Contribute to security knowledge base
+
+**Time Commitment**: ~4-6 hours/month
+
+### Selection Criteria
+
+**Prerequisites:**
+- 2+ years development experience
+- Strong code review skills
+- Interest in security
+- Good communication skills
+- Team peer nomination
+
+**Ratio**: 1 Security Champion per 5-10 developers
+
+### Training Curriculum
+
+**Month 1-3**: OWASP Top 10, secure coding, threat modeling
+**Month 4-6**: Auth/crypto, API security, injection prevention
+**Month 7-9**: Container security, secrets management, CI/CD security
+**Month 10-12**: Incident response, compliance, pentesting basics
+
+### Security Review Checklist
+
+Key areas to check in PRs:
+- [ ] Authentication & authorization on new endpoints
+- [ ] Input validation (server-side)
+- [ ] SQL injection prevention (parameterized queries)
+- [ ] XSS prevention (output escaping)
+- [ ] Cryptography (strong algorithms, secure RNG)
+- [ ] Error handling (no stack traces, fail-secure)
+- [ ] Dependencies scanned for vulnerabilities
+- [ ] Security headers configured
+
+**Result**:
+- ✅ All passed → Approve PR
+- ⚠️ Minor issues → Approve with comments
+- ❌ Critical issues → Request changes, escalate to security team
+
+### Metrics Dashboard
+
+**Security Posture**:
+| Metric | Target |
+|--------|--------|
+| High severity findings | <5 |
+| Secrets in git | 0 |
+| PR security review coverage | >80% |
+| Time to remediate critical | <24 hours |
+
+**Program Health**:
+| Metric | Target |
+|--------|--------|
+| Champion retention | >90% |
+| Training attendance | >85% |
+| Knowledge base contributions | 10+/month |
+| Security incidents | <2/quarter |
+
+### Escalation Process
+
+**When to escalate to security team**:
+1. Critical vulnerability (SQL injection, hardcoded secret)
+2. Architectural security concern (broken auth design)
+3. Compliance issue (GDPR violation)
+4. Security incident (suspected breach)
+5. Unclear security decision (cryptography choice)
+
+**Channels**:
+| Severity | Channel | Response Time |
+|----------|---------|---------------|
+| Critical | Slack #security-incidents + PagerDuty | < 15 min |
+| High | Slack #security-team | < 2 hours |
+| Medium | GitHub issue + Slack | < 1 day |
+| Low | GitHub issue | < 1 week |
+
+### Full Documentation
+
+Complete Security Champions program guide: `docs/SECURITY-CHAMPIONS.md`
+- Security Champions Charter
+- Complete training curriculum (12 months)
+- Detailed security review checklist
+- Metrics dashboard templates
+- Recognition & rewards program
+- Knowledge base structure
+- Quarterly sync meeting templates
+
+### Related
+
+- OWASP Security Champions Guide: https://owasp.org/www-project-security-champions-guidebook/
+- Security Training Resources: `docs/SECURITY.md`
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -824,6 +936,6 @@ Instead:
 
 ---
 
-**Version:** 1.5.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96)
+**Version:** 1.6.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96, ROOSE-97)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team
