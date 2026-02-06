@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig)
-> **Version:** 1.4.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling)
+> **Version:** 1.5.0
 
 ## Pre-Commit Secret Scanning
 
@@ -679,6 +679,140 @@ Complete DAST guide: `docs/DAST-GUIDE.md`
 - DAST Guide: `docs/DAST-GUIDE.md`
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Error Handling Security Framework
+
+**Secure error handling** voor OWASP A10:2025 (NEW: Mishandling of Exceptional Conditions).
+
+### Core Principles
+
+**Fail-secure defaults**:
+- Unknown errors → deny access
+- Missing permissions → 403 Forbidden
+- Unexpected behavior → fail closed
+
+**No information disclosure**:
+- ❌ Stack traces in production
+- ❌ File paths in error messages
+- ❌ Database structure revealed
+- ❌ Dependency versions exposed
+
+**Structured logging**:
+- JSON format for log aggregation
+- Request IDs for tracing
+- Severity levels for alerting
+- No sensitive data logged
+
+### Quick Usage
+
+**API routes**:
+```typescript
+import { handleApiError, createValidationError } from '@/lib/error-handler'
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    if (!body.email) {
+      throw createValidationError('Email is required')
+    }
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return handleApiError(error, request)  // ← Centralized handling
+  }
+}
+```
+
+**Error factories**:
+```typescript
+import {
+  createAuthError,      // 401 Unauthorized
+  createForbiddenError, // 403 Forbidden (fail-secure)
+  createNotFoundError,  // 404 Not Found
+  createRateLimitError, // 429 Too Many Requests
+  createDatabaseError,  // 500 Internal Error (critical)
+} from '@/lib/error-handler'
+```
+
+### Error Response Format
+
+**Production** (sanitized):
+```json
+{
+  "error": {
+    "message": "Invalid email format",
+    "code": "VALIDATION_ERROR",
+    "requestId": "1738834123456-xyz789",
+    "timestamp": "2026-02-06T09:00:00.000Z"
+  }
+}
+```
+
+**Development** (with stack trace):
+```json
+{
+  "error": { ... },
+  "stack": "Error: Invalid email format\n    at..."
+}
+```
+
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `lib/error-handler.ts` | Core error handling logic |
+| `app/global-error.tsx` | Global React error boundary |
+| `app/error.tsx` | Page-level error boundary |
+| `app/not-found.tsx` | 404 handler |
+| `app/api/example/route.ts` | API error handling example |
+
+### Security Features
+
+**Message sanitization**:
+| Original | Sanitized |
+|----------|-----------|
+| `Failed to read /etc/secrets/api-key` | `Failed to read [PATH]` |
+| `Invalid email: user@example.com` | `Invalid email: [EMAIL]` |
+| `Token ABC123XYZ... invalid` | `Token [REDACTED] invalid` |
+
+**Severity-based alerting**:
+- LOW → Slack (daily review)
+- MEDIUM → Slack + Email (hourly review)
+- HIGH → Email + Slack ping (< 15 min)
+- CRITICAL → PagerDuty + Phone (< 5 min)
+
+### Best Practices
+
+**DO**:
+- ✅ Use error factories for consistent handling
+- ✅ Sanitize all error messages
+- ✅ Include request IDs for tracing
+- ✅ Fail secure (deny by default)
+- ✅ Log structured errors (JSON)
+- ✅ Use Sentry for error tracking
+
+**DON'T**:
+- ❌ Expose stack traces in production
+- ❌ Return sensitive data in errors
+- ❌ Fail open (allow by default)
+- ❌ Ignore errors silently
+- ❌ Log passwords/tokens
+
+### Full Documentation
+
+Complete error handling guide: `docs/ERROR-HANDLING.md`
+- Error flow architecture
+- Error factories reference
+- Integration with Sentry
+- Testing error handling
+- Monitoring & alerting setup
+
+### Related
+
+- OWASP A10:2025: Mishandling of Exceptional Conditions
+- Next.js Error Handling: https://nextjs.org/docs/app/building-your-application/routing/error-handling
+- Sentry Documentation: https://docs.sentry.io/platforms/javascript/guides/nextjs/
+- RFC 7807 Problem Details: https://www.rfc-editor.org/rfc/rfc7807
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -690,6 +824,6 @@ Instead:
 
 ---
 
-**Version:** 1.4.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95)
+**Version:** 1.5.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team
