@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling), ROOSE-97 (Security Champions)
-> **Version:** 1.6.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling), ROOSE-97 (Security Champions), ROOSE-98 (Penetration Testing)
+> **Version:** 1.7.0
 
 ## Pre-Commit Secret Scanning
 
@@ -813,6 +813,155 @@ Complete error handling guide: `docs/ERROR-HANDLING.md`
 - RFC 7807 Problem Details: https://www.rfc-editor.org/rfc/rfc7807
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Quarterly Penetration Testing Program
+
+**External security validation** through quarterly penetration tests by certified security professionals.
+
+### Overview
+
+Quarterly penetration testing provides continuous security validation through simulated attacks by professional security testers.
+
+**Why Quarterly?**
+- 📅 Continuous validation (4x/year)
+- 🔄 Regular feedback loop
+- 🎯 Catch regressions early
+- 📊 Trend analysis over time
+
+**OWASP 2025 Coverage**: All categories (comprehensive validation)
+
+### Testing Scope
+
+**In-Scope Assets**:
+| Asset Type | Examples | Test Frequency |
+|------------|----------|----------------|
+| Web Applications | https://roosevelt-ops.vercel.app | Quarterly |
+| APIs | REST, GraphQL endpoints | Quarterly |
+| Authentication | OAuth, JWT, session management | Quarterly |
+| Infrastructure | Cloud resources (AWS/Azure/GCP) | Bi-annually |
+| Mobile Apps | iOS, Android applications | Quarterly |
+
+**Out-of-Scope**:
+- ❌ Third-party services (unless explicitly approved)
+- ❌ Production databases (use staging replicas)
+- ❌ Social engineering attacks
+- ❌ Physical security testing
+- ❌ Denial-of-Service (DoS) attacks
+
+### Vendor Selection
+
+**Must-Have Qualifications**:
+- CREST or OSCP certified testers
+- Minimum 5 years pentesting experience
+- Experience with our tech stack (Next.js, Supabase, Vercel)
+- OWASP Top 10:2025 testing methodology
+- Insurance coverage ($2M+ cyber liability)
+- NDA and data protection agreements
+
+**Recommended Vendors**: Cobalt.io, Synack, Bishop Fox, NCC Group, Trail of Bits
+
+### Testing Schedule
+
+**Quarterly Calendar**:
+| Quarter | Months | Focus Area |
+|---------|--------|------------|
+| Q1 | Jan-Mar | Web application + API security |
+| Q2 | Apr-Jun | Infrastructure + cloud security |
+| Q3 | Jul-Sep | Web application + API security |
+| Q4 | Oct-Dec | Year-end comprehensive + mobile |
+
+### Remediation SLAs
+
+| Severity | Exploitability | Remediation SLA |
+|----------|----------------|-----------------|
+| Critical | Easy (automated exploit) | **7 days** |
+| High | Medium (manual exploit) | **30 days** |
+| Medium | Hard (specific conditions) | **90 days** |
+| Low | Very hard (theoretical) | **180 days or backlog** |
+
+**Critical Escalation Flow**:
+1. Vendor notifies security team immediately
+2. Security team notifies CTO within 1 hour
+3. Emergency fix deployed within 24 hours
+4. Retesting within 7 days
+
+### Plane Integration
+
+**Workflow**:
+```
+Pentest Report (PDF)
+    ↓
+Security team reviews
+    ↓
+Create Plane issues for each finding
+    ↓
+Assign to appropriate team
+    ↓
+Track remediation progress
+    ↓
+Request retesting
+    ↓
+Close issue after verification
+```
+
+**Plane Labels**:
+| Label | Purpose |
+|-------|---------|
+| `pentest-q1-2026` | Findings from Q1 2026 pentest |
+| `pentest-q2-2026` | Findings from Q2 2026 pentest |
+| `pentest-remediated` | Fixed and verified |
+| `pentest-retest-needed` | Awaiting vendor verification |
+| `pentest-false-positive` | Vendor finding, but not exploitable |
+
+### Metrics & KPIs
+
+**Security Posture**:
+| Metric | Target |
+|--------|--------|
+| Critical findings | 0 per test |
+| High findings | <3 per test |
+| Remediation within SLA | >95% |
+| Retest pass rate | >90% |
+
+**Program Health**:
+| Metric | Target |
+|--------|--------|
+| Tests per year | 4 (quarterly) |
+| Test coverage | >90% of assets |
+| Cost per test | <$15k |
+
+### Budget Planning
+
+**Annual Cost Estimate**: ~$98k
+- Web app pentest: $10k × 4 = $40k
+- Infrastructure test: $15k × 2 = $30k
+- Retesting: $2k × 4 = $8k
+- Platform subscription: $20k (if platform-based)
+
+**ROI Calculation**:
+- Average data breach cost: **$4.45M** (IBM 2023)
+- Average pentest cost: **$98k/year**
+- Risk reduction: **~60%** (via early detection)
+- **Expected value**: $4.45M × 60% = $2.67M avoided loss
+- **ROI**: $2.67M / $98k = **27x** return
+
+### Full Documentation
+
+Complete penetration testing program guide: `docs/PENETRATION-TESTING.md`
+- Vendor selection criteria
+- Pre-test checklist
+- Testing methodology (OWASP Top 10:2025 coverage)
+- Findings tracking in Plane
+- Retesting process
+- Reporting & documentation standards
+- Emergency response protocols
+
+### Related
+
+- OWASP Testing Guide: https://owasp.org/www-project-web-security-testing-guide/
+- PTES (Penetration Testing Execution Standard): http://www.pentest-standard.org/
+- CVSS Calculator: https://www.first.org/cvss/calculator/3.1
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Security Champions Program
 
 **Embed security expertise** in development teams through peer-led education and collaborative security reviews.
@@ -936,6 +1085,6 @@ Instead:
 
 ---
 
-**Version:** 1.6.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96, ROOSE-97)
+**Version:** 1.7.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96, ROOSE-97, ROOSE-98)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team
