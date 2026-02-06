@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit Security Hooks)
-> **Version:** 1.0.0
+> **Implemented:** ROOSE-91 (Pre-commit Security Hooks), ROOSE-92 (CI SAST with Semgrep)
+> **Version:** 1.1.0
 
 ## Pre-Commit Secret Scanning
 
@@ -177,6 +177,209 @@ Common false positives already allowlisted:
 - Gitleaks Documentation: https://github.com/gitleaks/gitleaks
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## CI/CD Security - SAST (Semgrep)
+
+All pull requests and commits are automatically scanned for security vulnerabilities using [Semgrep](https://semgrep.dev).
+
+### What is Scanned
+
+**OWASP Top 10:2025 Coverage:**
+- A01: Broken Access Control (missing auth middleware)
+- A02: Cryptographic Failures (weak hashing algorithms)
+- A03: Injection (SQL injection, command injection)
+- A04: Insecure Design (hardcoded secrets)
+- A05: Security Misconfiguration (CORS, weak session config)
+- A06: Vulnerable Components (eval usage, unsafe functions)
+- A07: Authentication Failures (weak session cookies)
+- A08: Data Integrity Failures (unsafe deserialization)
+- A09: Security Logging Failures (missing error logging)
+- A10: SSRF (unvalidated external requests)
+
+**Project-Specific Patterns:**
+- Missing rate limiting middleware
+- Missing input validation middleware
+- Debug statements (`console.log`) in production code
+
+### Normal Workflow
+
+```bash
+# Create feature branch
+git checkout -b feature/my-feature
+
+# Make changes
+# ... code ...
+
+# Commit (triggers pre-commit hooks)
+git commit -m "feat: implement feature"
+
+# Push (triggers CI)
+git push origin feature/my-feature
+
+# Create PR
+# → Semgrep scans code automatically
+# → Findings appear in GitHub Security tab
+# → PR blocked if CRITICAL/HIGH findings detected
+```
+
+### When Findings are Detected
+
+Semgrep findings are shown in:
+1. **GitHub Security tab** (SARIF format)
+2. **PR comments** (if Semgrep App connected)
+3. **CI logs** (detailed output)
+
+**Severity Levels:**
+- **ERROR** (blocks PR): Fix required before merge
+- **WARNING** (blocks PR): Fix or justify before merge
+- **INFO** (informational): Consider fixing, doesn't block
+
+### Fixing Common Issues
+
+**1. SQL Injection Risk**
+
+```javascript
+// ❌ WRONG: String concatenation
+const query = `SELECT * FROM users WHERE id = ${userId}`
+db.query(query)
+
+// ✅ CORRECT: Parameterized query
+db.query('SELECT * FROM users WHERE id = ?', [userId])
+```
+
+**2. Missing Auth Middleware**
+
+```javascript
+// ❌ WRONG: Unprotected endpoint
+app.get('/api/admin/users', async (req, res) => {
+  // ...
+})
+
+// ✅ CORRECT: Auth middleware
+app.get('/api/admin/users', requireAuth, async (req, res) => {
+  // ...
+})
+```
+
+**3. Hardcoded Secrets**
+
+```javascript
+// ❌ WRONG: Hardcoded API key
+const STRIPE_KEY = "sk_live_1234567890abcdef"
+
+// ✅ CORRECT: Environment variable
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY
+```
+
+**4. Weak Crypto**
+
+```javascript
+// ❌ WRONG: MD5 hash
+const hash = crypto.createHash('md5').update(password).digest('hex')
+
+// ✅ CORRECT: bcrypt with strong rounds
+const hash = await bcrypt.hash(password, 12)
+```
+
+### Suppressing False Positives
+
+For legitimate code that Semgrep incorrectly flags:
+
+```javascript
+// nosemgrep: sql-injection-risk
+const staticQuery = `SELECT * FROM users WHERE role = 'admin'`
+```
+
+**Warning:** Only use suppressions for genuine false positives!
+
+### Running Locally
+
+Install Semgrep:
+
+```bash
+# macOS
+brew install semgrep
+
+# Or via pip
+pip install semgrep
+```
+
+Scan your code:
+
+```bash
+# Full scan with custom rules
+semgrep --config .semgrep/rules.yml .
+
+# Scan with OWASP rulesets
+semgrep --config "p/owasp-top-ten" --config .semgrep/rules.yml .
+
+# Only show errors
+semgrep --config .semgrep/rules.yml --severity ERROR .
+```
+
+### Configuration
+
+Semgrep config: `.semgrep/rules.yml`
+- Custom security rules for Roosevelt OPS
+- Project-specific patterns
+- OWASP Top 10:2025 coverage
+
+Semgrep ignore: `.semgrep/.semgrepignore`
+- Test files excluded by default
+- Node modules excluded
+- Documentation excluded
+
+### CI Schedule
+
+Semgrep runs:
+- ✅ Every push to `main`
+- ✅ Every pull request
+- ✅ Daily at 2:00 AM UTC (full scan)
+
+### Security Dashboard
+
+View findings:
+1. **GitHub Security tab** → Code scanning alerts
+2. **Semgrep App** (if connected) → Trends and analytics
+3. **Pull Request checks** → Inline comments
+
+### Best Practices
+
+**DO:**
+- ✅ Fix ERROR severity findings immediately
+- ✅ Review WARNING severity findings before merge
+- ✅ Run Semgrep locally before pushing
+- ✅ Suppress only genuine false positives with comments
+
+**DON'T:**
+- ❌ Ignore security findings
+- ❌ Suppress findings without justification
+- ❌ Bypass PR checks without security team approval
+- ❌ Use `--disable` flags in CI
+
+### Getting Help
+
+**Semgrep finding unclear:**
+1. Check `.semgrep/README.md` for rule documentation
+2. Ask in #security channel
+3. Tag @security-team in PR for review
+
+**Need to suppress a finding:**
+1. Add inline comment with rule ID: `// nosemgrep: rule-id`
+2. Explain why in PR description
+3. Get security team approval
+
+**Custom rule needed:**
+1. Add rule to `.semgrep/rules.yml`
+2. Test locally: `semgrep --validate .semgrep/rules.yml`
+3. Create PR with rule justification
+
+### Related
+
+- OWASP 2025 Top 10: https://owasp.org/Top10/2025/
+- Semgrep Documentation: https://semgrep.dev/docs/
+- Custom Rules Guide: `.semgrep/README.md`
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -188,6 +391,6 @@ Instead:
 
 ---
 
-**Version:** 1.0.0 (ROOSE-91)
+**Version:** 1.1.0 (ROOSE-91, ROOSE-92)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team

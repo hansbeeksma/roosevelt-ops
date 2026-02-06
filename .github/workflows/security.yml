@@ -1,0 +1,116 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  semgrep:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/javascript
+            p/typescript
+            p/nodejs
+            .semgrep/rules.yml
+          # Block PR on CRITICAL/HIGH findings
+          generateSarif: '1'
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+          SEMGREP_TIMEOUT: 300
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Check for blocking findings
+        if: github.event_name == 'pull_request'
+        run: |
+          # Parse SARIF for CRITICAL/HIGH severity findings
+          CRITICAL_HIGH=$(jq -r '.runs[].results[] | select(.level == "error" or .level == "warning") | .level' semgrep.sarif 2>/dev/null | wc -l || echo "0")
+
+          if [ "$CRITICAL_HIGH" -gt 0 ]; then
+            echo "❌ Found $CRITICAL_HIGH CRITICAL/HIGH severity findings"
+            echo "Review the Security tab for details"
+            exit 1
+          else
+            echo "✅ No CRITICAL/HIGH severity findings detected"
+          fi
+
+  dependency-check:
+    name: SCA (npm audit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high --json > audit-results.json || true
+
+      - name: Generate audit report
+        run: |
+          VULNS=$(jq '.metadata.vulnerabilities | to_entries | map(select(.value > 0)) | from_entries' audit-results.json)
+
+          if [ "$VULNS" != "{}" ]; then
+            echo "⚠️ Vulnerabilities detected:"
+            jq -r '.metadata.vulnerabilities' audit-results.json
+          else
+            echo "✅ No vulnerabilities detected"
+          fi
+
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-results
+          path: audit-results.json
+          retention-days: 30
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [semgrep, dependency-check]
+    if: always()
+
+    steps:
+      - name: Security checks summary
+        run: |
+          echo "## Security Checks Summary"
+          echo ""
+          echo "All security checks completed."
+          echo "Review the Security tab for detailed findings."
