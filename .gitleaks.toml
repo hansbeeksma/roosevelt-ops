@@ -1,0 +1,89 @@
+# Roosevelt OPS - Shared Gitleaks Configuration
+# Copy to project root for CI availability
+# Extends default gitleaks rules with custom patterns
+
+title = "Roosevelt OPS Gitleaks Config"
+
+[extend]
+# Use default gitleaks rules as base
+useDefault = true
+
+# Custom rules for our stack
+[[rules]]
+id = "stripe-live-key"
+description = "Stripe Live Secret Key"
+regex = '''sk_live_[a-zA-Z0-9]{20,}'''
+tags = ["stripe", "secret", "critical"]
+
+[[rules]]
+id = "stripe-test-key"
+description = "Stripe Test Secret Key"
+regex = '''sk_test_[a-zA-Z0-9]{20,}'''
+tags = ["stripe", "secret"]
+
+[[rules]]
+id = "stripe-restricted-key"
+description = "Stripe Restricted Key"
+regex = '''rk_(live|test)_[a-zA-Z0-9]{20,}'''
+tags = ["stripe", "secret"]
+
+[[rules]]
+id = "stripe-webhook-secret"
+description = "Stripe Webhook Secret"
+regex = '''whsec_[a-zA-Z0-9]{20,}'''
+tags = ["stripe", "secret"]
+
+[[rules]]
+id = "supabase-service-role"
+description = "Supabase Service Role Key"
+regex = '''eyJ[a-zA-Z0-9_-]{50,}\.eyJ[a-zA-Z0-9_-]{50,}\.[\w-]{50,}'''
+tags = ["supabase", "jwt", "secret"]
+[rules.allowlist]
+paths = [
+  '''package-lock\.json''',
+  '''pnpm-lock\.yaml''',
+  '''yarn\.lock''',
+  '''\.test\.(ts|js|tsx|jsx)$''',
+  '''__tests__/''',
+  '''\.spec\.(ts|js|tsx|jsx)$''',
+]
+
+[[rules]]
+id = "sendgrid-api-key"
+description = "SendGrid API Key"
+regex = '''SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}'''
+tags = ["sendgrid", "secret"]
+
+[[rules]]
+id = "printify-api-key"
+description = "Printify API Key (JWT)"
+regex = '''eyJ[a-zA-Z0-9_-]+\.eyJ[^"'\s]{100,}'''
+tags = ["printify", "jwt", "secret"]
+[rules.allowlist]
+paths = [
+  '''package-lock\.json''',
+  '''pnpm-lock\.yaml''',
+  '''yarn\.lock''',
+]
+
+[[rules]]
+id = "shopify-access-token"
+description = "Shopify Access Token"
+regex = '''shpat_[a-fA-F0-9]{32}'''
+tags = ["shopify", "secret"]
+
+# Global allowlist
+[allowlist]
+paths = [
+  '''node_modules/''',
+  '''\.next/''',
+  '''dist/''',
+  '''build/''',
+  '''\.turbo/''',
+  '''package-lock\.json''',
+  '''pnpm-lock\.yaml''',
+  '''yarn\.lock''',
+  '''\.gitleaks\.toml''',
+  '''\.github/workflows/''',
+  '''docs/IDE-SECURITY-SETUP\.md''',
+]
