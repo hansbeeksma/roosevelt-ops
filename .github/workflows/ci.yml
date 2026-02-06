@@ -81,10 +81,43 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
+  performance-budget:
+    name: Performance Budget
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        run: |
+          npm run lhci:autorun -- --collect.settings.chromeFlags="--no-sandbox"
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 7
+
   all-checks-passed:
     name: All Checks Passed
     runs-on: ubuntu-latest
-    needs: [lint, build, secret-scanning, dependency-audit]
+    needs: [lint, build, secret-scanning, dependency-audit, performance-budget]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"

@@ -118,6 +118,85 @@ Open [http://localhost:3000](http://localhost:3000)
 - Predictive alerts (burnout risk, bottleneck detection)
 - Team comparison
 
+---
+
+## Performance Budgets (ROOSE-37.11) ✅ CONFIGURED
+
+Automated performance budget enforcement via Lighthouse CI in GitHub Actions.
+
+### Performance Budgets Overview
+
+**Core Web Vitals Thresholds:**
+- **First Contentful Paint (FCP)**: ≤ 2000ms
+- **Largest Contentful Paint (LCP)**: ≤ 2500ms
+- **Cumulative Layout Shift (CLS)**: ≤ 0.1
+- **Total Blocking Time (TBT)**: ≤ 300ms
+- **Speed Index**: ≤ 3000ms
+- **Time to Interactive (TTI)**: ≤ 5000ms
+
+**Resource Budgets:**
+- **JavaScript**: 500KB (max)
+- **CSS**: 100KB (max)
+- **Images**: 300KB (max)
+- **Fonts**: 150KB (max)
+- **Total page weight**: 1.5MB (max)
+
+**Score Requirements:**
+- **Performance**: ≥ 85%
+- **Accessibility**: ≥ 90%
+- **Best Practices**: ≥ 90%
+- **SEO**: ≥ 90%
+
+### CI Integration
+
+Performance budgets are enforced automatically in CI:
+- ✅ Runs on every PR and push to main
+- ✅ Fails build if budgets are exceeded
+- ✅ Lighthouse reports uploaded as artifacts
+- ✅ Results stored temporarily for review
+
+### Local Testing
+
+Run performance audits locally:
+
+```bash
+# Full Lighthouse CI run (build + start + audit)
+npm run perf
+
+# Individual commands
+npm run lhci:collect    # Collect Lighthouse data
+npm run lhci:assert     # Assert against budgets
+npm run lhci:autorun    # Full automated run
+```
+
+### Configuration
+
+Performance budgets are defined in `lighthouserc.json`. Adjust thresholds as needed based on:
+- Page complexity
+- Target audience (3G/4G/5G)
+- Business requirements
+
+**Viewing Results:**
+1. Check GitHub Actions artifacts for Lighthouse HTML reports
+2. Review assertion failures in CI logs
+3. Use Chrome DevTools Lighthouse for interactive testing
+
+### Budget Philosophy
+
+**Why these budgets?**
+- **2000ms FCP**: Good perceived load time on 4G
+- **2500ms LCP**: Main content visible quickly
+- **0.1 CLS**: Minimal layout shift for good UX
+- **300ms TBT**: Interactive without lag
+- **1.5MB total**: Reasonable on modern connections
+
+**Adjusting budgets:**
+- For marketing pages: Tighter budgets (FCP 1500ms, 1MB total)
+- For dashboard apps: Looser budgets acceptable (FCP 3000ms, 2MB total)
+- For mobile-first: Stricter budgets to account for slower networks
+
+---
+
 ## Documentation
 
 - [Branding Questionnaire](docs/branding-questionnaire.md) - Complete company profile en merkidentiteit vragenlijst
