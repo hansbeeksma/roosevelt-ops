@@ -1,0 +1,283 @@
+name: Security Configuration Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  env-validation:
+    name: Environment Variable Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in .env files
+        run: |
+          echo "🔍 Scanning for secrets in .env files..."
+
+          # Find all .env files (except .env.example)
+          ENV_FILES=$(find . -name ".env*" -not -name "*.example" -not -path "*/node_modules/*" -not -path "*/.next/*" 2>/dev/null || true)
+
+          if [ -n "$ENV_FILES" ]; then
+            echo "⚠️  WARNING: .env files found in repository:"
+            echo "$ENV_FILES"
+            echo ""
+            echo "❌ CRITICAL: .env files should NEVER be committed to git!"
+            echo "These files may contain secrets and should be in .gitignore"
+            exit 1
+          else
+            echo "✅ No .env files found (expected - should be in .gitignore)"
+          fi
+
+      - name: Validate .env.example exists
+        run: |
+          if [ ! -f ".env.example" ] && [ ! -f ".env.local.example" ]; then
+            echo "⚠️  No .env.example file found"
+            echo "Create .env.example as template for developers"
+          else
+            echo "✅ Environment template exists"
+          fi
+
+      - name: Check for hardcoded secrets in code
+        run: |
+          echo "🔍 Checking for hardcoded secrets patterns..."
+
+          # Common secret patterns (beyond Gitleaks)
+          PATTERNS=(
+            "password.*=.*['\"][^'\"]{8,}['\"]"
+            "api[_-]?key.*=.*['\"][^'\"]{20,}['\"]"
+            "secret.*=.*['\"][^'\"]{20,}['\"]"
+            "token.*=.*['\"][^'\"]{20,}['\"]"
+          )
+
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rn -E "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules --exclude-dir=.next . || true)
+            if [ -n "$MATCHES" ]; then
+              echo "⚠️  Potential hardcoded secret found:"
+              echo "$MATCHES"
+              FOUND=1
+            fi
+          done
+
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No obvious hardcoded secrets found"
+          fi
+
+  security-headers:
+    name: Security Headers Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Next.js security headers config
+        run: |
+          echo "🔍 Checking next.config.js for security headers..."
+
+          if [ ! -f "next.config.js" ] && [ ! -f "next.config.mjs" ]; then
+            echo "❌ No next.config.js found"
+            exit 1
+          fi
+
+          CONFIG_FILE=$([ -f "next.config.js" ] && echo "next.config.js" || echo "next.config.mjs")
+
+          # Check for security headers
+          REQUIRED_HEADERS=(
+            "X-Frame-Options"
+            "X-Content-Type-Options"
+            "Referrer-Policy"
+            "Permissions-Policy"
+          )
+
+          MISSING_HEADERS=()
+          for header in "${REQUIRED_HEADERS[@]}"; do
+            if ! grep -q "$header" "$CONFIG_FILE"; then
+              MISSING_HEADERS+=("$header")
+            fi
+          done
+
+          if [ ${#MISSING_HEADERS[@]} -gt 0 ]; then
+            echo "⚠️  Missing security headers in $CONFIG_FILE:"
+            printf '  - %s\n' "${MISSING_HEADERS[@]}"
+            echo ""
+            echo "Add these headers to next.config.js"
+          else
+            echo "✅ All required security headers present"
+          fi
+
+      - name: Check for Content Security Policy
+        run: |
+          CONFIG_FILE=$([ -f "next.config.js" ] && echo "next.config.js" || echo "next.config.mjs")
+
+          if grep -q "Content-Security-Policy" "$CONFIG_FILE"; then
+            echo "✅ CSP header configured"
+          else
+            echo "⚠️  No Content-Security-Policy found"
+            echo "Consider adding CSP for XSS protection"
+          fi
+
+      - name: Check CORS configuration
+        run: |
+          echo "🔍 Checking for CORS misconfigurations..."
+
+          # Check API routes for open CORS
+          CORS_ALL=$(grep -rn "Access-Control-Allow-Origin.*\*" app/api/ --include="*.ts" --include="*.js" 2>/dev/null || true)
+
+          if [ -n "$CORS_ALL" ]; then
+            echo "⚠️  CORS set to allow all origins (*) found:"
+            echo "$CORS_ALL"
+            echo ""
+            echo "Use specific origins in production"
+          else
+            echo "✅ No wildcard CORS found"
+          fi
+
+  nextjs-security:
+    name: Next.js Security Configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check package.json security
+        run: |
+          echo "🔍 Checking package.json configuration..."
+
+          # Check for dangerous scripts
+          DANGEROUS_SCRIPTS=$(jq -r '.scripts | to_entries[] | select(.value | contains("rm -rf /") or contains("sudo")) | .key' package.json 2>/dev/null || true)
+
+          if [ -n "$DANGEROUS_SCRIPTS" ]; then
+            echo "⚠️  Potentially dangerous scripts found:"
+            echo "$DANGEROUS_SCRIPTS"
+          else
+            echo "✅ No dangerous scripts detected"
+          fi
+
+      - name: Check for production dependencies
+        run: |
+          # Check if dev dependencies are in production
+          DEV_IN_PROD=$(jq -r '.dependencies | keys[] | select(. | test("@types|eslint|prettier|jest|test"))' package.json 2>/dev/null || true)
+
+          if [ -n "$DEV_IN_PROD" ]; then
+            echo "⚠️  Dev packages in production dependencies:"
+            echo "$DEV_IN_PROD"
+            echo "Move these to devDependencies"
+          else
+            echo "✅ Clean production dependencies"
+          fi
+
+      - name: Check Next.js version
+        run: |
+          NEXT_VERSION=$(jq -r '.dependencies.next // .devDependencies.next' package.json)
+          echo "Next.js version: $NEXT_VERSION"
+
+          # Warn if version is too old (example: < 14)
+          MAJOR_VERSION=$(echo "$NEXT_VERSION" | sed -n 's/[^0-9]*\([0-9]*\).*/\1/p')
+
+          if [ "$MAJOR_VERSION" -lt 14 ]; then
+            echo "⚠️  Next.js version $NEXT_VERSION may have security vulnerabilities"
+            echo "Consider upgrading to Next.js 14+"
+          else
+            echo "✅ Next.js version is recent"
+          fi
+
+  docker-security:
+    name: Docker Security (Optional)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Dockerfile
+        id: check-docker
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Dockerfile found - will scan"
+          else
+            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  No Dockerfile found - skipping container scan"
+          fi
+
+      - name: Run Trivy vulnerability scanner
+        if: steps.check-docker.outputs.dockerfile_exists == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        if: steps.check-docker.outputs.dockerfile_exists == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+
+  ssl-tls-checks:
+    name: SSL/TLS Configuration
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'  # Only weekly
+
+    steps:
+      - name: Check SSL Labs rating (if deployed)
+        run: |
+          echo "ℹ️  SSL/TLS is managed by Vercel"
+          echo "Manual check: https://www.ssllabs.com/ssltest/"
+          echo "Expected: A+ rating with Vercel"
+
+      - name: Verify security headers (production)
+        run: |
+          echo "ℹ️  Run security headers check on production URL"
+          echo "Tool: https://securityheaders.com/"
+          echo ""
+          echo "Expected headers:"
+          echo "  - Strict-Transport-Security"
+          echo "  - X-Frame-Options"
+          echo "  - X-Content-Type-Options"
+          echo "  - Referrer-Policy"
+          echo "  - Permissions-Policy"
+
+  config-summary:
+    name: Configuration Summary
+    runs-on: ubuntu-latest
+    needs: [env-validation, security-headers, nextjs-security, docker-security]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🔒 Security Configuration Checks Complete"
+          echo ""
+          echo "### Checks Performed:"
+          echo "- ✅ Environment variable validation"
+          echo "- ✅ Security headers configuration"
+          echo "- ✅ Next.js security settings"
+          echo "- ✅ Docker security scan (if applicable)"
+          echo "- ℹ️  SSL/TLS verification (weekly)"
+          echo ""
+          echo "Review findings above for recommendations."

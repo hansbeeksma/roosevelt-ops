@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit Hooks), ROOSE-92 (CI SAST), ROOSE-93 (CI SCA)
-> **Version:** 1.2.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-95 (Misconfig)
+> **Version:** 1.3.0
 
 ## Pre-Commit Secret Scanning
 
@@ -462,6 +462,108 @@ Complete SCA setup guide: `docs/SCA-SETUP.md`
 - SBOM Guide: https://www.cisa.gov/sbom
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Security Misconfiguration Prevention
+
+**CRITICAL**: Security Misconfiguration surged to **#2** in OWASP Top 10:2025 (was #5 in 2021).
+
+### Automated Checks
+
+**Local checker** (before commit):
+```bash
+./scripts/security-check.sh
+```
+
+**CI checks** (every push/PR):
+- ✅ Environment variable validation (.env files not in git)
+- ✅ Security headers configuration
+- ✅ CORS misconfiguration detection
+- ✅ Hardcoded secrets patterns
+- ✅ Next.js security settings
+
+### Security Headers
+
+All routes automatically serve security headers:
+
+| Header | Protection |
+|--------|------------|
+| `Strict-Transport-Security` | Force HTTPS (2 years) |
+| `X-Frame-Options` | Prevent clickjacking |
+| `X-Content-Type-Options` | Prevent MIME sniffing |
+| `Content-Security-Policy` | XSS protection |
+| `Referrer-Policy` | Limit referrer leakage |
+| `Permissions-Policy` | Block camera/mic/geolocation |
+
+**Test headers**:
+```bash
+curl -I https://your-domain.com | grep -i security
+```
+
+Or use: https://securityheaders.com/
+
+### Environment Variables
+
+**Rules**:
+1. NEVER commit `.env.local` or `.env.production` to git
+2. Use `.env.example` as template for developers
+3. Use `NEXT_PUBLIC_` prefix ONLY for client-safe vars
+4. Keep server secrets without `NEXT_PUBLIC_` prefix
+5. Rotate immediately if secrets leaked
+
+**Validation**:
+```bash
+# Check for .env files in git
+git ls-files | grep "^\.env\." | grep -v "\.example$"
+# Should return nothing
+```
+
+### CORS Configuration
+
+**Bad** (wildcard - allows all):
+```typescript
+'Access-Control-Allow-Origin': '*'  // ❌ INSECURE
+```
+
+**Good** (restricted):
+```typescript
+const allowedOrigins = ['https://your-domain.com']
+if (allowedOrigins.includes(origin)) {
+  headers['Access-Control-Allow-Origin'] = origin  // ✅ SECURE
+}
+```
+
+### Best Practices
+
+**DO:**
+- ✅ Run `./scripts/security-check.sh` before commits
+- ✅ Test security headers after deployment
+- ✅ Use environment variables for all secrets
+- ✅ Restrict CORS to specific origins
+- ✅ Validate authentication on all API routes
+
+**DON'T:**
+- ❌ Commit .env files with secrets
+- ❌ Use wildcard CORS in production
+- ❌ Expose server secrets to client
+- ❌ Skip security checks for "small" changes
+
+### Full Documentation
+
+Complete misconfiguration guide: `docs/SECURITY-CONFIG.md`
+- Security headers configuration
+- Environment variable security
+- CORS best practices
+- Next.js security patterns
+- Docker security (if applicable)
+- CI/CD security checks
+
+### Related
+
+- OWASP 2025: A02 - Security Misconfiguration
+- Next.js Security: https://nextjs.org/docs/advanced-features/security-headers
+- CSP Guide: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+- Security Headers: https://securityheaders.com/
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -473,6 +575,6 @@ Instead:
 
 ---
 
-**Version:** 1.2.0 (ROOSE-91, ROOSE-92, ROOSE-93)
+**Version:** 1.3.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-95)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team
