@@ -86,4 +86,5 @@ paths = [
   '''\.gitleaks\.toml''',
   '''\.github/workflows/''',
   '''docs/IDE-SECURITY-SETUP\.md''',
+  '''docs/SECURITY\.md''',  # Security documentation with examples
 ]

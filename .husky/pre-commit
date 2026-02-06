@@ -1,6 +1,6 @@
-# Secret scanning (runs before lint-staged)
-if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks protect --staged --config .gitleaks.toml --verbose
-fi
+# Secret scanning with emergency bypass support (ROOSE-91)
+# See docs/SECURITY.md for bypass instructions
+bash ~/Development/shared/pre-commit-gitleaks.sh
 
+# Code quality checks
 npx lint-staged
