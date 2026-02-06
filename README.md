@@ -244,7 +244,8 @@ SENTRY_PROJECT=your-project-slug
 4. Set up alerts for regressions
 
 **Detailed Guide:**
-- [RUM Dashboard Setup](docs/RUM_DASHBOARD.md) - Complete setup and usage guide
+- [Performance Playbook](docs/PERFORMANCE-PLAYBOOK.md) - Complete performance optimization guide
+- [RUM Dashboard Setup](docs/RUM_DASHBOARD.md) - RUM setup and usage
 - [Performance Budget](docs/PERFORMANCE_BUDGET.md) - Budget configuration
 
 ### Integration
