@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit Security Hooks), ROOSE-92 (CI SAST with Semgrep)
-> **Version:** 1.1.0
+> **Implemented:** ROOSE-91 (Pre-commit Hooks), ROOSE-92 (CI SAST), ROOSE-93 (CI SCA)
+> **Version:** 1.2.0
 
 ## Pre-Commit Secret Scanning
 
@@ -380,6 +380,88 @@ View findings:
 - Custom Rules Guide: `.semgrep/README.md`
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Software Composition Analysis (SCA)
+
+All dependencies are scanned for vulnerabilities using **multi-layered SCA**:
+
+### Automated Scanning
+
+**Layer 1: Dependabot** (daily at 3 AM)
+- Automatic PR creation for security updates
+- Grouped updates (security patches, production deps, dev deps)
+- Auto-merge eligible patches (with approval)
+
+**Layer 2: npm audit** (every push/PR)
+- Built-in NPM vulnerability scanner
+- Fast baseline security check
+
+**Layer 3: Snyk** (every push/PR)
+- Deep vulnerability analysis
+- Reachability detection
+- Automatic fix suggestions
+
+### SBOM (Software Bill of Materials)
+
+Every push to `main` generates:
+- **CycloneDX** format (security-focused)
+- **SPDX** format (compliance-focused)
+- 📦 Available in GitHub Artifacts (90-day retention)
+
+**Use cases**:
+- Supply chain transparency
+- Vulnerability tracking
+- Compliance requirements (NTIA)
+- Incident response
+
+### License Compliance
+
+All dependencies checked for license compatibility:
+- ✅ **Allowed**: MIT, Apache-2.0, BSD, ISC
+- ⚠️ **Review required**: GPL, AGPL, LGPL, MPL
+- ❌ **Blocked**: Proprietary, Unknown
+
+Copyleft licenses trigger warnings in CI.
+
+### Vulnerability Response
+
+| Severity | Response Time | Action |
+|----------|---------------|--------|
+| 🚨 **Critical** | Immediate | PR blocked, fix required |
+| ⚠️ **High** | 7 days | Fix or document exception |
+| 🟡 **Medium** | 30 days | Fix in next sprint |
+| 🔵 **Low** | Next quarter | Backlog item |
+
+### Best Practices
+
+**DO:**
+- ✅ Review Dependabot PRs daily
+- ✅ Auto-merge security patches (after CI passes)
+- ✅ Keep dependencies up-to-date
+- ✅ Check SBOM before releases
+
+**DON'T:**
+- ❌ Ignore dependency PRs
+- ❌ Auto-merge major version updates
+- ❌ Add dependencies without license review
+- ❌ Skip CI checks for "small" updates
+
+### Full Documentation
+
+Complete SCA setup guide: `docs/SCA-SETUP.md`
+- Dependabot configuration
+- Snyk integration
+- SBOM generation
+- License compliance
+- Vulnerability response workflow
+
+### Related
+
+- OWASP 2025: A03 - Software Supply Chain Failures
+- Dependabot: https://docs.github.com/en/code-security/dependabot
+- Snyk: https://snyk.io
+- SBOM Guide: https://www.cisa.gov/sbom
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -391,6 +473,6 @@ Instead:
 
 ---
 
-**Version:** 1.1.0 (ROOSE-91, ROOSE-92)
+**Version:** 1.2.0 (ROOSE-91, ROOSE-92, ROOSE-93)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team

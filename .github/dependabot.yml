@@ -1,35 +1,59 @@
 version: 2
 updates:
+  # NPM dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
+      interval: "daily"  # Daily for security patches
+      time: "03:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 15
     labels:
       - "dependencies"
       - "security"
+      - "automerge"  # Signal for auto-merge workflow
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
     groups:
+      # Security patches - highest priority
+      security-patches:
+        applies-to: security-updates
+        update-types:
+          - "patch"
+          - "minor"
+          - "major"
+      # Production dependencies
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "patch"
           - "minor"
+      # Development dependencies
       development-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-    security-updates-only: false
+    # Enable security-only mode via repository settings
+    # security-updates-only: true  # Uncomment for security-only PRs
     reviewers:
       - "hansbeeksma"
+    # Auto-approve minor/patch updates (requires GitHub Actions)
+    pull-request-branch-name:
+      separator: "/"
 
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
     labels:
       - "dependencies"
       - "ci"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
     reviewers:
       - "hansbeeksma"

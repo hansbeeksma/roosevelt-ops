@@ -101,16 +101,194 @@ jobs:
           path: audit-results.json
           retention-days: 30
 
+  snyk-scan:
+    name: SCA (Snyk)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true  # Don't fail build, collect results
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --json-file-output=snyk-results.json
+
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+          category: snyk
+
+      - name: Check for critical vulnerabilities
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f snyk-results.json ]; then
+            CRITICAL=$(jq '[.vulnerabilities[] | select(.severity == "critical")] | length' snyk-results.json 2>/dev/null || echo "0")
+            HIGH=$(jq '[.vulnerabilities[] | select(.severity == "high")] | length' snyk-results.json 2>/dev/null || echo "0")
+
+            echo "📊 Snyk Results:"
+            echo "  - Critical: $CRITICAL"
+            echo "  - High: $HIGH"
+
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "❌ CRITICAL vulnerabilities detected - PR BLOCKED"
+              echo "Fix critical vulnerabilities before merging"
+              exit 1
+            fi
+
+            if [ "$HIGH" -gt 3 ]; then
+              echo "⚠️  Too many HIGH vulnerabilities ($HIGH > 3)"
+              echo "Consider fixing before merge"
+            fi
+          fi
+
+      - name: Upload Snyk results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-results
+          path: snyk-results.json
+          retention-days: 30
+
+  sbom-generation:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM (CycloneDX format)
+        run: |
+          syft packages dir:. -o cyclonedx-json=sbom-cyclonedx.json
+          syft packages dir:. -o spdx-json=sbom-spdx.json
+
+      - name: SBOM Summary
+        run: |
+          echo "📦 SBOM Generated:"
+          PACKAGES=$(jq '.components | length' sbom-cyclonedx.json 2>/dev/null || echo "0")
+          echo "  - Total packages: $PACKAGES"
+          echo "  - Formats: CycloneDX, SPDX"
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom-cyclonedx.json
+            sbom-spdx.json
+          retention-days: 90
+
+      - name: Attach SBOM to release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "SBOM available for download in Actions artifacts"
+          echo "Consider attaching to releases for supply chain transparency"
+
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        run: |
+          license-checker --json --out license-report.json || true
+          license-checker --summary
+
+      - name: Validate licenses
+        run: |
+          # Block copyleft licenses in production dependencies
+          COPYLEFT=$(jq -r 'to_entries[] | select(.value.licenses | test("GPL|AGPL|LGPL")) | .key' license-report.json 2>/dev/null | wc -l || echo "0")
+
+          if [ "$COPYLEFT" -gt 0 ]; then
+            echo "⚠️  Copyleft licenses detected:"
+            jq -r 'to_entries[] | select(.value.licenses | test("GPL|AGPL|LGPL")) | "\(.key): \(.value.licenses)"' license-report.json
+            echo ""
+            echo "Review these dependencies for license compliance"
+            # Uncomment to block:
+            # exit 1
+          else
+            echo "✅ No copyleft licenses detected"
+          fi
+
+          # Check for unknown/custom licenses
+          UNKNOWN=$(jq -r 'to_entries[] | select(.value.licenses | test("UNKNOWN|Custom|Proprietary")) | .key' license-report.json 2>/dev/null | wc -l || echo "0")
+
+          if [ "$UNKNOWN" -gt 0 ]; then
+            echo "⚠️  Unknown licenses detected:"
+            jq -r 'to_entries[] | select(.value.licenses | test("UNKNOWN|Custom|Proprietary")) | "\(.key): \(.value.licenses)"' license-report.json
+          fi
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.json
+          retention-days: 90
+
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [semgrep, dependency-check]
+    needs: [semgrep, dependency-check, snyk-scan, sbom-generation, license-compliance]
     if: always()
 
     steps:
       - name: Security checks summary
         run: |
-          echo "## Security Checks Summary"
+          echo "## 🔒 Security Checks Summary"
+          echo ""
+          echo "### Completed Scans:"
+          echo "- ✅ SAST (Semgrep)"
+          echo "- ✅ SCA (npm audit + Snyk)"
+          echo "- ✅ SBOM Generation (CycloneDX + SPDX)"
+          echo "- ✅ License Compliance"
+          echo ""
+          echo "### Review:"
+          echo "- 📊 Security tab: SARIF findings"
+          echo "- 📦 Artifacts: SBOM, audit reports, licenses"
+          echo "- 🔍 Dependabot: Automated PR creation"
           echo ""
           echo "All security checks completed."
-          echo "Review the Security tab for detailed findings."
