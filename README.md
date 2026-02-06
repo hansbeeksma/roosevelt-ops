@@ -245,6 +245,7 @@ SENTRY_PROJECT=your-project-slug
 
 **Detailed Guide:**
 - [Performance Playbook](docs/PERFORMANCE-PLAYBOOK.md) - Complete performance optimization guide
+- [A/B Testing Guide](docs/AB_TESTING.md) - Measure performance optimization impact
 - [RUM Dashboard Setup](docs/RUM_DASHBOARD.md) - RUM setup and usage
 - [Performance Budget](docs/PERFORMANCE_BUDGET.md) - Budget configuration
 
