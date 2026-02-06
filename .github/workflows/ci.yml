@@ -60,8 +60,15 @@ jobs:
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.30.0_linux_x64.tar.gz | tar xz
           sudo mv gitleaks /usr/local/bin/
 
-      - name: Run gitleaks (diff only)
-        run: gitleaks detect --config .gitleaks.toml --log-opts="HEAD~1..HEAD" --verbose
+      - name: Run gitleaks
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Scan entire PR branch
+            gitleaks detect --config .gitleaks.toml --log-opts="origin/${{ github.base_ref }}...HEAD" --verbose
+          else
+            # Only scan latest commit on push
+            gitleaks detect --config .gitleaks.toml --log-opts="HEAD~1..HEAD" --verbose
+          fi
 
   dependency-audit:
     name: Dependency Audit
