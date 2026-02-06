@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WebVitals } from "@/components/WebVitals";
 
 export const metadata: Metadata = {
   title: "Roosevelt OPS - Engineering Metrics",
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        <WebVitals />
         {children}
       </body>
     </html>

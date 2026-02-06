@@ -197,6 +197,70 @@ Performance budgets are defined in `lighthouserc.json`. Adjust thresholds as nee
 
 ---
 
+## RUM Dashboard - Core Web Vitals (ROOSE-37.12) ✅ CONFIGURED
+
+Real User Monitoring voor Core Web Vitals tracking via Sentry Performance.
+
+### What's Tracked
+
+**Core Web Vitals (Production):**
+- **LCP** (Largest Contentful Paint) - Target: ≤ 2.5s
+- **INP** (Interaction to Next Paint) - Target: ≤ 200ms
+- **CLS** (Cumulative Layout Shift) - Target: ≤ 0.1
+
+**Additional Metrics:**
+- **FCP** (First Contentful Paint) - Target: ≤ 1.8s
+- **TTFB** (Time to First Byte) - Target: ≤ 800ms
+
+### Features
+
+- ✅ Automatic metric collection on every page load
+- ✅ P75 (75th percentile) tracking
+- ✅ Segmentation by device, geography, connection type
+- ✅ Real-time dashboard in Sentry
+- ✅ Alerts for metric degradation
+- ✅ Session Replay integration
+
+### Configuration
+
+**Required Environment Variables:**
+```env
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+SENTRY_ORG=your-org-slug
+SENTRY_PROJECT=your-project-slug
+```
+
+**Sentry Settings:**
+1. Enable Performance Monitoring in project settings
+2. Set trace sample rate (100% dev, 10% prod recommended)
+3. Enable Session Replay for debugging
+
+### Viewing Metrics
+
+**In Sentry:**
+1. Navigate to **Performance** → **Web Vitals**
+2. View P75 scores for all metrics
+3. Filter by page, device, geography, browser
+4. Set up alerts for regressions
+
+**Detailed Guide:**
+- [RUM Dashboard Setup](docs/RUM_DASHBOARD.md) - Complete setup and usage guide
+- [Performance Budget](docs/PERFORMANCE_BUDGET.md) - Budget configuration
+
+### Integration
+
+RUM tracking works alongside:
+- **Lighthouse CI** (pre-deployment synthetic testing)
+- **Performance Budgets** (build-time enforcement)
+- **Sentry Error Tracking** (runtime errors)
+
+**Complete performance workflow:**
+1. **Build time**: Lighthouse CI checks budgets
+2. **Post-deploy**: RUM tracks real user metrics
+3. **Ongoing**: Alerts notify of degradations
+
+---
+
 ## Documentation
 
 - [Branding Questionnaire](docs/branding-questionnaire.md) - Complete company profile en merkidentiteit vragenlijst

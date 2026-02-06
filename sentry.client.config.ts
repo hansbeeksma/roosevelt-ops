@@ -26,5 +26,21 @@ Sentry.init({
       maskAllText: true,
       blockAllMedia: true,
     }),
+    // Browser Tracing for performance monitoring and Web Vitals
+    Sentry.browserTracingIntegration({
+      // Enable automatic instrumentation of browser performance
+      enableLongTask: true,
+      enableInp: true, // Interaction to Next Paint (replaces FID)
+    }),
   ],
+
+  // Performance Monitoring
+  profilesSampleRate: 1.0, // Profile 100% of sampled transactions
+
+  // Custom tags for segmentation
+  initialScope: {
+    tags: {
+      environment: process.env.NODE_ENV || 'development',
+    },
+  },
 });
