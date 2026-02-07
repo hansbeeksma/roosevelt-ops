@@ -14,16 +14,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify Configuration
+        id: config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "::warning::Supabase secrets not configured. Skipping metrics alert checks."
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
+        if: steps.config.outputs.configured == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install Dependencies
+        if: steps.config.outputs.configured == 'true'
         run: npm ci
 
       - name: Check Deployment Frequency
+        if: steps.config.outputs.configured == 'true'
         id: deploy-freq
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -79,6 +95,7 @@ jobs:
           " >> $GITHUB_OUTPUT
 
       - name: Check Lead Time
+        if: steps.config.outputs.configured == 'true'
         id: lead-time
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -136,6 +153,7 @@ jobs:
           " >> $GITHUB_OUTPUT
 
       - name: Check Change Failure Rate
+        if: steps.config.outputs.configured == 'true'
         id: cfr
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -183,6 +201,7 @@ jobs:
           " >> $GITHUB_OUTPUT
 
       - name: Check MTTR
+        if: steps.config.outputs.configured == 'true'
         id: mttr
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -243,6 +262,7 @@ jobs:
           " >> $GITHUB_OUTPUT
 
       - name: Check Alert Cooldown
+        if: steps.config.outputs.configured == 'true'
         id: cooldown
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -308,7 +328,7 @@ jobs:
           " >> $GITHUB_OUTPUT
 
       - name: Send Slack Alerts
-        if: steps.cooldown.outputs.SEND_ALERTS == 'true'
+        if: steps.config.outputs.configured == 'true' && steps.cooldown.outputs.SEND_ALERTS == 'true'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
@@ -365,7 +385,7 @@ jobs:
             }"
 
       - name: Log Alerts to Database
-        if: steps.cooldown.outputs.SEND_ALERTS == 'true'
+        if: steps.config.outputs.configured == 'true' && steps.cooldown.outputs.SEND_ALERTS == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
