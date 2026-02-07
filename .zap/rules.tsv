@@ -1,0 +1,40 @@
+# OWASP ZAP Rules Configuration
+# Format: RULE_ID	THRESHOLD	[IGNORE|WARN|FAIL]
+#
+# Thresholds: OFF, LOW, MEDIUM, HIGH
+# Actions: IGNORE (skip), WARN (report but don't fail), FAIL (block)
+
+# High priority rules (FAIL on findings)
+10021	MEDIUM	FAIL	# X-Content-Type-Options header missing
+10020	MEDIUM	FAIL	# X-Frame-Options header missing
+10096	MEDIUM	FAIL	# Timestamp Disclosure
+10055	MEDIUM	FAIL	# CSP header missing or misconfigured
+10035	MEDIUM	FAIL	# Strict-Transport-Security header missing
+
+# Authentication & Session Management
+10011	MEDIUM	FAIL	# Cookie without Secure flag
+10054	MEDIUM	FAIL	# Cookie without HttpOnly flag
+10052	MEDIUM	FAIL	# Cookie without SameSite attribute
+
+# Injection vulnerabilities
+40012	MEDIUM	FAIL	# Cross-Site Scripting (Reflected)
+40014	MEDIUM	FAIL	# Cross-Site Scripting (Persistent)
+40016	MEDIUM	FAIL	# Cross-Site Scripting (DOM Based)
+40018	MEDIUM	FAIL	# SQL Injection
+90019	MEDIUM	FAIL	# Code Injection
+
+# Information Disclosure
+10049	LOW	WARN	# Viewstate without MAC
+10050	LOW	WARN	# Retrieved from Cache
+10051	LOW	WARN	# Relative Path Confusion
+10060	LOW	WARN	# Server Header Info Leak
+
+# Medium priority (WARN)
+10027	LOW	WARN	# Information Disclosure - Suspicious Comments
+10033	LOW	WARN	# Directory Browsing
+10040	LOW	WARN	# Secure Pages Include Mixed Content
+10045	LOW	WARN	# Source Code Disclosure
+
+# Low priority (IGNORE false positives)
+10015	OFF	IGNORE	# Incomplete or No Cache-control (too strict for Next.js)
+10063	OFF	IGNORE	# Permissions Policy (handled by app)
