@@ -65,7 +65,7 @@ jobs:
 
       - name: Upload ZAP results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zap-scan-results
           path: |
@@ -96,7 +96,7 @@ jobs:
 
       - name: Upload API scan results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zap-api-results
           path: |
