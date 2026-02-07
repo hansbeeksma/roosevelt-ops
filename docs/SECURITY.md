@@ -1,8 +1,8 @@
 # Security Guidelines
 
 > **Part of:** ROOSE-52 (OWASP 2025 Security Gates)
-> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-95 (Misconfig)
-> **Version:** 1.3.0
+> **Implemented:** ROOSE-91 (Pre-commit), ROOSE-92 (SAST), ROOSE-93 (SCA), ROOSE-94 (DAST), ROOSE-95 (Misconfig), ROOSE-96 (Error Handling), ROOSE-97 (Security Champions), ROOSE-98 (Penetration Testing)
+> **Version:** 1.7.0
 
 ## Pre-Commit Secret Scanning
 
@@ -564,6 +564,516 @@ Complete misconfiguration guide: `docs/SECURITY-CONFIG.md`
 - Security Headers: https://securityheaders.com/
 - Roosevelt OPS Security Framework: ROOSE-52
 
+## Dynamic Application Security Testing (DAST)
+
+**Runtime security testing** of deployed applications using OWASP ZAP.
+
+### What is DAST
+
+DAST tests **running applications** by:
+- Sending HTTP requests to deployed app
+- Analyzing responses for vulnerabilities
+- Testing authentication flows
+- Scanning API endpoints
+
+**Difference from SAST**:
+- SAST: Analyzes source code (white-box)
+- DAST: Tests running app (black-box)
+
+**OWASP 2025 Coverage**:
+- A01: Broken Access Control
+- A02: Security Misconfiguration
+- A05: Injection (SQL, XSS, etc.)
+
+### Quick Start
+
+**GitHub Actions (Recommended)**:
+```bash
+# 1. Deploy to Vercel preview
+git push origin feature/my-branch
+
+# 2. Trigger DAST scan
+gh workflow run dast-scan.yml \
+  -f target_url=https://roosevelt-ops-abc123.vercel.app \
+  -f scan_type=baseline
+
+# 3. Check results
+gh run list --workflow=dast-scan.yml
+```
+
+**Local ZAP Desktop**:
+```bash
+brew install --cask owasp-zap
+npm run dev
+# Open ZAP Desktop → Manual Explore: http://localhost:3000
+```
+
+### Scan Types
+
+| Type | Duration | Use Case |
+|------|----------|----------|
+| **Baseline** | 2-5 min | PR validation, quick checks |
+| **Full** | 30-60 min | Pre-production, thorough analysis |
+
+### When to Run
+
+- ✅ After Vercel preview deployment (before merge)
+- ✅ Weekly on production (Sunday 2 AM)
+- ✅ Before major releases
+- ✅ After security-sensitive changes
+
+### Results
+
+Findings appear in:
+1. **GitHub Issues** (auto-created)
+2. **GitHub Security tab** (SARIF format)
+3. **Workflow Artifacts** (HTML/JSON/Markdown reports)
+
+**Severity Response**:
+| Level | Action |
+|-------|--------|
+| **High** | Fix immediately, blocks PR |
+| **Medium** | Fix before merge |
+| **Low** | Fix when possible |
+| **Informational** | Review, may ignore |
+
+### Common Findings
+
+**Missing Security Headers**:
+- Already implemented in `next.config.js` (ROOSE-95)
+- Verify in deployed app via `curl -I`
+
+**Cookie Security**:
+- Ensure production uses HTTPS (Vercel default)
+
+**XSS Vulnerabilities**:
+- Sanitize user input
+- Use CSP headers (configured)
+
+### Best Practices
+
+**DO**:
+- ✅ Scan preview deployments before merge
+- ✅ Run full scans weekly on production
+- ✅ Review all High/Medium findings
+- ✅ Update `.zap/rules.tsv` based on findings
+
+**DON'T**:
+- ❌ Scan production during business hours
+- ❌ Ignore Medium severity findings
+- ❌ Run full scans on every commit (too slow)
+
+### Full Documentation
+
+Complete DAST guide: `docs/DAST-GUIDE.md`
+- GitHub Actions workflow details
+- Local ZAP usage
+- Authenticated scanning
+- Result interpretation
+- Integration with Vercel
+
+### Related
+
+- OWASP ZAP: https://www.zaproxy.org/
+- ZAP GitHub Actions: https://github.com/zaproxy/action-baseline
+- DAST Guide: `docs/DAST-GUIDE.md`
+- Roosevelt OPS Security Framework: ROOSE-52
+
+## Error Handling Security Framework
+
+**Secure error handling** voor OWASP A10:2025 (NEW: Mishandling of Exceptional Conditions).
+
+### Core Principles
+
+**Fail-secure defaults**:
+- Unknown errors → deny access
+- Missing permissions → 403 Forbidden
+- Unexpected behavior → fail closed
+
+**No information disclosure**:
+- ❌ Stack traces in production
+- ❌ File paths in error messages
+- ❌ Database structure revealed
+- ❌ Dependency versions exposed
+
+**Structured logging**:
+- JSON format for log aggregation
+- Request IDs for tracing
+- Severity levels for alerting
+- No sensitive data logged
+
+### Quick Usage
+
+**API routes**:
+```typescript
+import { handleApiError, createValidationError } from '@/lib/error-handler'
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    if (!body.email) {
+      throw createValidationError('Email is required')
+    }
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return handleApiError(error, request)  // ← Centralized handling
+  }
+}
+```
+
+**Error factories**:
+```typescript
+import {
+  createAuthError,      // 401 Unauthorized
+  createForbiddenError, // 403 Forbidden (fail-secure)
+  createNotFoundError,  // 404 Not Found
+  createRateLimitError, // 429 Too Many Requests
+  createDatabaseError,  // 500 Internal Error (critical)
+} from '@/lib/error-handler'
+```
+
+### Error Response Format
+
+**Production** (sanitized):
+```json
+{
+  "error": {
+    "message": "Invalid email format",
+    "code": "VALIDATION_ERROR",
+    "requestId": "1738834123456-xyz789",
+    "timestamp": "2026-02-06T09:00:00.000Z"
+  }
+}
+```
+
+**Development** (with stack trace):
+```json
+{
+  "error": { ... },
+  "stack": "Error: Invalid email format\n    at..."
+}
+```
+
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `lib/error-handler.ts` | Core error handling logic |
+| `app/global-error.tsx` | Global React error boundary |
+| `app/error.tsx` | Page-level error boundary |
+| `app/not-found.tsx` | 404 handler |
+| `app/api/example/route.ts` | API error handling example |
+
+### Security Features
+
+**Message sanitization**:
+| Original | Sanitized |
+|----------|-----------|
+| `Failed to read /etc/secrets/api-key` | `Failed to read [PATH]` |
+| `Invalid email: user@example.com` | `Invalid email: [EMAIL]` |
+| `Token ABC123XYZ... invalid` | `Token [REDACTED] invalid` |
+
+**Severity-based alerting**:
+- LOW → Slack (daily review)
+- MEDIUM → Slack + Email (hourly review)
+- HIGH → Email + Slack ping (< 15 min)
+- CRITICAL → PagerDuty + Phone (< 5 min)
+
+### Best Practices
+
+**DO**:
+- ✅ Use error factories for consistent handling
+- ✅ Sanitize all error messages
+- ✅ Include request IDs for tracing
+- ✅ Fail secure (deny by default)
+- ✅ Log structured errors (JSON)
+- ✅ Use Sentry for error tracking
+
+**DON'T**:
+- ❌ Expose stack traces in production
+- ❌ Return sensitive data in errors
+- ❌ Fail open (allow by default)
+- ❌ Ignore errors silently
+- ❌ Log passwords/tokens
+
+### Full Documentation
+
+Complete error handling guide: `docs/ERROR-HANDLING.md`
+- Error flow architecture
+- Error factories reference
+- Integration with Sentry
+- Testing error handling
+- Monitoring & alerting setup
+
+### Related
+
+- OWASP A10:2025: Mishandling of Exceptional Conditions
+- Next.js Error Handling: https://nextjs.org/docs/app/building-your-application/routing/error-handling
+- Sentry Documentation: https://docs.sentry.io/platforms/javascript/guides/nextjs/
+- RFC 7807 Problem Details: https://www.rfc-editor.org/rfc/rfc7807
+- Roosevelt OPS Security Framework: ROOSE-52
+
+## Quarterly Penetration Testing Program
+
+**External security validation** through quarterly penetration tests by certified security professionals.
+
+### Overview
+
+Quarterly penetration testing provides continuous security validation through simulated attacks by professional security testers.
+
+**Why Quarterly?**
+- 📅 Continuous validation (4x/year)
+- 🔄 Regular feedback loop
+- 🎯 Catch regressions early
+- 📊 Trend analysis over time
+
+**OWASP 2025 Coverage**: All categories (comprehensive validation)
+
+### Testing Scope
+
+**In-Scope Assets**:
+| Asset Type | Examples | Test Frequency |
+|------------|----------|----------------|
+| Web Applications | https://roosevelt-ops.vercel.app | Quarterly |
+| APIs | REST, GraphQL endpoints | Quarterly |
+| Authentication | OAuth, JWT, session management | Quarterly |
+| Infrastructure | Cloud resources (AWS/Azure/GCP) | Bi-annually |
+| Mobile Apps | iOS, Android applications | Quarterly |
+
+**Out-of-Scope**:
+- ❌ Third-party services (unless explicitly approved)
+- ❌ Production databases (use staging replicas)
+- ❌ Social engineering attacks
+- ❌ Physical security testing
+- ❌ Denial-of-Service (DoS) attacks
+
+### Vendor Selection
+
+**Must-Have Qualifications**:
+- CREST or OSCP certified testers
+- Minimum 5 years pentesting experience
+- Experience with our tech stack (Next.js, Supabase, Vercel)
+- OWASP Top 10:2025 testing methodology
+- Insurance coverage ($2M+ cyber liability)
+- NDA and data protection agreements
+
+**Recommended Vendors**: Cobalt.io, Synack, Bishop Fox, NCC Group, Trail of Bits
+
+### Testing Schedule
+
+**Quarterly Calendar**:
+| Quarter | Months | Focus Area |
+|---------|--------|------------|
+| Q1 | Jan-Mar | Web application + API security |
+| Q2 | Apr-Jun | Infrastructure + cloud security |
+| Q3 | Jul-Sep | Web application + API security |
+| Q4 | Oct-Dec | Year-end comprehensive + mobile |
+
+### Remediation SLAs
+
+| Severity | Exploitability | Remediation SLA |
+|----------|----------------|-----------------|
+| Critical | Easy (automated exploit) | **7 days** |
+| High | Medium (manual exploit) | **30 days** |
+| Medium | Hard (specific conditions) | **90 days** |
+| Low | Very hard (theoretical) | **180 days or backlog** |
+
+**Critical Escalation Flow**:
+1. Vendor notifies security team immediately
+2. Security team notifies CTO within 1 hour
+3. Emergency fix deployed within 24 hours
+4. Retesting within 7 days
+
+### Plane Integration
+
+**Workflow**:
+```
+Pentest Report (PDF)
+    ↓
+Security team reviews
+    ↓
+Create Plane issues for each finding
+    ↓
+Assign to appropriate team
+    ↓
+Track remediation progress
+    ↓
+Request retesting
+    ↓
+Close issue after verification
+```
+
+**Plane Labels**:
+| Label | Purpose |
+|-------|---------|
+| `pentest-q1-2026` | Findings from Q1 2026 pentest |
+| `pentest-q2-2026` | Findings from Q2 2026 pentest |
+| `pentest-remediated` | Fixed and verified |
+| `pentest-retest-needed` | Awaiting vendor verification |
+| `pentest-false-positive` | Vendor finding, but not exploitable |
+
+### Metrics & KPIs
+
+**Security Posture**:
+| Metric | Target |
+|--------|--------|
+| Critical findings | 0 per test |
+| High findings | <3 per test |
+| Remediation within SLA | >95% |
+| Retest pass rate | >90% |
+
+**Program Health**:
+| Metric | Target |
+|--------|--------|
+| Tests per year | 4 (quarterly) |
+| Test coverage | >90% of assets |
+| Cost per test | <$15k |
+
+### Budget Planning
+
+**Annual Cost Estimate**: ~$98k
+- Web app pentest: $10k × 4 = $40k
+- Infrastructure test: $15k × 2 = $30k
+- Retesting: $2k × 4 = $8k
+- Platform subscription: $20k (if platform-based)
+
+**ROI Calculation**:
+- Average data breach cost: **$4.45M** (IBM 2023)
+- Average pentest cost: **$98k/year**
+- Risk reduction: **~60%** (via early detection)
+- **Expected value**: $4.45M × 60% = $2.67M avoided loss
+- **ROI**: $2.67M / $98k = **27x** return
+
+### Full Documentation
+
+Complete penetration testing program guide: `docs/PENETRATION-TESTING.md`
+- Vendor selection criteria
+- Pre-test checklist
+- Testing methodology (OWASP Top 10:2025 coverage)
+- Findings tracking in Plane
+- Retesting process
+- Reporting & documentation standards
+- Emergency response protocols
+
+### Related
+
+- OWASP Testing Guide: https://owasp.org/www-project-web-security-testing-guide/
+- PTES (Penetration Testing Execution Standard): http://www.pentest-standard.org/
+- CVSS Calculator: https://www.first.org/cvss/calculator/3.1
+- Roosevelt OPS Security Framework: ROOSE-52
+
+## Security Champions Program
+
+**Embed security expertise** in development teams through peer-led education and collaborative security reviews.
+
+### Overview
+
+**Security Champions** zijn developers die security ownership nemen binnen hun teams en fungeren als brug tussen security team en development.
+
+**Benefits**:
+- Shift-left security (catch issues earlier)
+- Knowledge sharing (security expertise spreads)
+- Faster security reviews (embedded expertise)
+- Better security culture (ownership mindset)
+
+### Responsibilities
+
+**Security Champions:**
+- ✅ Monthly security training attendance
+- ✅ Peer security reviews for PRs
+- ✅ Advocate for security best practices
+- ✅ Escalate security concerns
+- ✅ Contribute to security knowledge base
+
+**Time Commitment**: ~4-6 hours/month
+
+### Selection Criteria
+
+**Prerequisites:**
+- 2+ years development experience
+- Strong code review skills
+- Interest in security
+- Good communication skills
+- Team peer nomination
+
+**Ratio**: 1 Security Champion per 5-10 developers
+
+### Training Curriculum
+
+**Month 1-3**: OWASP Top 10, secure coding, threat modeling
+**Month 4-6**: Auth/crypto, API security, injection prevention
+**Month 7-9**: Container security, secrets management, CI/CD security
+**Month 10-12**: Incident response, compliance, pentesting basics
+
+### Security Review Checklist
+
+Key areas to check in PRs:
+- [ ] Authentication & authorization on new endpoints
+- [ ] Input validation (server-side)
+- [ ] SQL injection prevention (parameterized queries)
+- [ ] XSS prevention (output escaping)
+- [ ] Cryptography (strong algorithms, secure RNG)
+- [ ] Error handling (no stack traces, fail-secure)
+- [ ] Dependencies scanned for vulnerabilities
+- [ ] Security headers configured
+
+**Result**:
+- ✅ All passed → Approve PR
+- ⚠️ Minor issues → Approve with comments
+- ❌ Critical issues → Request changes, escalate to security team
+
+### Metrics Dashboard
+
+**Security Posture**:
+| Metric | Target |
+|--------|--------|
+| High severity findings | <5 |
+| Secrets in git | 0 |
+| PR security review coverage | >80% |
+| Time to remediate critical | <24 hours |
+
+**Program Health**:
+| Metric | Target |
+|--------|--------|
+| Champion retention | >90% |
+| Training attendance | >85% |
+| Knowledge base contributions | 10+/month |
+| Security incidents | <2/quarter |
+
+### Escalation Process
+
+**When to escalate to security team**:
+1. Critical vulnerability (SQL injection, hardcoded secret)
+2. Architectural security concern (broken auth design)
+3. Compliance issue (GDPR violation)
+4. Security incident (suspected breach)
+5. Unclear security decision (cryptography choice)
+
+**Channels**:
+| Severity | Channel | Response Time |
+|----------|---------|---------------|
+| Critical | Slack #security-incidents + PagerDuty | < 15 min |
+| High | Slack #security-team | < 2 hours |
+| Medium | GitHub issue + Slack | < 1 day |
+| Low | GitHub issue | < 1 week |
+
+### Full Documentation
+
+Complete Security Champions program guide: `docs/SECURITY-CHAMPIONS.md`
+- Security Champions Charter
+- Complete training curriculum (12 months)
+- Detailed security review checklist
+- Metrics dashboard templates
+- Recognition & rewards program
+- Knowledge base structure
+- Quarterly sync meeting templates
+
+### Related
+
+- OWASP Security Champions Guide: https://owasp.org/www-project-security-champions-guidebook/
+- Security Training Resources: `docs/SECURITY.md`
+- Roosevelt OPS Security Framework: ROOSE-52
+
 ## Reporting Security Issues
 
 **DO NOT** create public GitHub issues for security vulnerabilities.
@@ -575,6 +1085,6 @@ Instead:
 
 ---
 
-**Version:** 1.3.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-95)
+**Version:** 1.7.0 (ROOSE-91, ROOSE-92, ROOSE-93, ROOSE-94, ROOSE-95, ROOSE-96, ROOSE-97, ROOSE-98)
 **Last Updated:** 2026-02-06
 **Owner:** Security Team

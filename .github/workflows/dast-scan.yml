@@ -1,0 +1,126 @@
+name: DAST Security Scan (OWASP ZAP)
+
+# Manual trigger only - requires deployed URL
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to scan (e.g., https://your-preview.vercel.app)'
+        required: true
+        type: string
+      scan_type:
+        description: 'Scan type'
+        required: true
+        type: choice
+        options:
+          - baseline
+          - full
+        default: 'baseline'
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+
+jobs:
+  zap-scan:
+    name: OWASP ZAP Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate target URL
+        run: |
+          TARGET="${{ inputs.target_url }}"
+
+          # Check URL is accessible
+          if ! curl -s -o /dev/null -w "%{http_code}" "$TARGET" | grep -q "200\|301\|302"; then
+            echo "❌ Target URL not accessible: $TARGET"
+            exit 1
+          fi
+
+          echo "✅ Target URL accessible: $TARGET"
+
+      - name: ZAP Baseline Scan
+        if: inputs.scan_type == 'baseline'
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          target: ${{ inputs.target_url }}
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j'
+          issue_title: 'OWASP ZAP Baseline Scan Findings'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ZAP Full Scan
+        if: inputs.scan_type == 'full'
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: ${{ inputs.target_url }}
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j'
+          issue_title: 'OWASP ZAP Full Scan Findings'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ZAP results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: zap-scan-results
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 30
+
+  api-security-test:
+    name: API Security Testing
+    runs-on: ubuntu-latest
+    if: inputs.scan_type == 'full'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target: ${{ inputs.target_url }}
+          format: openapi
+          # OpenAPI spec location (if available)
+          # api_spec: 'public/api-spec.json'
+          cmd_options: '-a'
+          issue_title: 'OWASP ZAP API Security Findings'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload API scan results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: zap-api-results
+          path: |
+            report_html.html
+            report_json.json
+          retention-days: 30
+
+  scan-summary:
+    name: DAST Scan Summary
+    runs-on: ubuntu-latest
+    needs: [zap-scan]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🔍 DAST Scan Complete"
+          echo ""
+          echo "**Target:** ${{ inputs.target_url }}"
+          echo "**Scan Type:** ${{ inputs.scan_type }}"
+          echo ""
+          echo "Check artifacts for detailed reports:"
+          echo "- HTML Report"
+          echo "- JSON Report"
+          echo "- Markdown Report"
+          echo ""
+          echo "Issues will be created automatically for findings."
