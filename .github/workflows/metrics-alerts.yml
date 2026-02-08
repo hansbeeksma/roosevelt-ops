@@ -2,7 +2,7 @@ name: Metrics Alert Checks
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Every 15 minutes
+    - cron: '0 8 * * *'  # Once daily at 08:00 UTC
   workflow_dispatch:  # Manual trigger
 
 jobs:

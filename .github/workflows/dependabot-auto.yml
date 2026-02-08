@@ -1,0 +1,9 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+
+jobs:
+  auto-merge:
+    uses: hansbeeksma/release-infrastructure/.github/workflows/reusable-dependabot-auto.yml@main
+    secrets: inherit

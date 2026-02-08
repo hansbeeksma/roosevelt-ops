@@ -1,0 +1,12 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    uses: hansbeeksma/release-infrastructure/.github/workflows/reusable-release-please.yml@main
+    with:
+      release-type: 'node'
+    secrets: inherit
