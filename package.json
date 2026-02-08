@@ -18,7 +18,7 @@
     "@opentelemetry/sdk-node": "^0.211.0",
     "@sentry/nextjs": "^10.38.0",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.95.2",
+    "@supabase/supabase-js": "^2.95.3",
     "@tremor/react": "^3.18.3",
     "@vercel/otel": "^2.1.0",
     "date-fns": "^4.1.0",
