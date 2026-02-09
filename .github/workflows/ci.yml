@@ -17,6 +17,15 @@ jobs:
       node-version: '20'
     secrets: inherit
 
+  notify-on-failure:
+    needs: [ci]
+    if: failure()
+    uses: hansbeeksma/release-infrastructure/.github/workflows/reusable-notify.yml@main
+    with:
+      workflow-name: "CI"
+      workflow-status: "failure"
+    secrets: inherit
+
   performance-budget:
     name: Performance Budget
     runs-on: ubuntu-latest

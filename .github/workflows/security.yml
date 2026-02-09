@@ -16,3 +16,12 @@ jobs:
       run-sbom: true
       run-license-check: true
     secrets: inherit
+
+  notify-on-failure:
+    needs: [security]
+    if: failure()
+    uses: hansbeeksma/release-infrastructure/.github/workflows/reusable-notify.yml@main
+    with:
+      workflow-name: "Security"
+      workflow-status: "failure"
+    secrets: inherit
