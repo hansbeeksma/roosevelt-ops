@@ -27,6 +27,7 @@
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/sdk-node": "^0.211.0",
+    "@rooseveltops/analytics-layer": "file:../../shared/analytics-layer",
     "@sentry/nextjs": "^10.38.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.2",
