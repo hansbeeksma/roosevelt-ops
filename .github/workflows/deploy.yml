@@ -1,0 +1,199 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - preview
+          - production
+      skip_smoke_tests:
+        description: 'Skip smoke tests'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # Gate: wait for CI to pass
+  ci-check:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CI workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'ci'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+  # Stage 1: Deploy to preview (staging)
+  deploy-preview:
+    name: Deploy Preview
+    needs: ci-check
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      deployment_id: ${{ steps.deploy.outputs.deployment_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to preview
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "deployment_id=$(echo "$URL" | sed 's|https://||' | sed 's|\.vercel\.app.*||')" >> $GITHUB_OUTPUT
+          echo "### Preview deployed" >> $GITHUB_STEP_SUMMARY
+          echo "URL: $URL" >> $GITHUB_STEP_SUMMARY
+
+  # Stage 2: Smoke tests against preview
+  smoke-tests:
+    name: Smoke Tests
+    needs: deploy-preview
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_smoke_tests }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          chmod +x scripts/smoke-test.sh
+          bash scripts/smoke-test.sh "${{ needs.deploy-preview.outputs.url }}"
+        env:
+          DEPLOY_URL: ${{ needs.deploy-preview.outputs.url }}
+
+      - name: Post smoke test results
+        if: always()
+        run: |
+          echo "### Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Target: ${{ needs.deploy-preview.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+
+  # Stage 3: Promote to production
+  deploy-production:
+    name: Deploy Production
+    needs: [deploy-preview, smoke-tests]
+    if: |
+      always() &&
+      (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped') &&
+      (github.event_name == 'push' || inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://roosevelt-ops.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Promote to production
+        run: |
+          vercel promote "${{ needs.deploy-preview.outputs.url }}" --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }}
+        continue-on-error: true
+
+      - name: Alternative - Direct production deploy
+        if: failure()
+        run: |
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Post deployment summary
+        run: |
+          echo "### Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "URL: https://roosevelt-ops.vercel.app" >> $GITHUB_STEP_SUMMARY
+
+  # Stage 4: Post-deploy notifications
+  notify:
+    name: Notify
+    needs: [deploy-production, smoke-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [ "${{ needs.deploy-production.result }}" = "success" ]; then
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "text=Production deploy succeeded" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.smoke-tests.result }}" = "failure" ]; then
+            echo "emoji=🚫" >> $GITHUB_OUTPUT
+            echo "text=Smoke tests failed - deploy blocked" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          else
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+            echo "text=Production deploy failed" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"attachments\": [{
+                \"color\": \"${{ steps.status.outputs.color }}\",
+                \"blocks\": [{
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"${{ steps.status.outputs.emoji }} *Roosevelt OPS Deploy*\n${{ steps.status.outputs.text }}\n\nCommit: \`${{ github.sha }}\`\nAuthor: ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow>\"
+                  }
+                }]
+              }]
+            }"
+
+  # Rollback job (manual trigger)
+  rollback:
+    name: Rollback
+    if: github.event_name == 'workflow_dispatch' && failure()
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: List recent deployments
+        run: |
+          echo "### Available Rollback Targets" >> $GITHUB_STEP_SUMMARY
+          vercel ls --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }} | head -10 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To rollback, run: \`vercel rollback <deployment-url>\`" >> $GITHUB_STEP_SUMMARY
