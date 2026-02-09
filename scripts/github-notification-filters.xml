@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom' xmlns:apps='http://schemas.google.com/apps/2006'>
+  <!-- GitHub Notification Filters for Gmail
+       Import: Gmail → Settings → Filters → Import filters
+       Related: ROOSE-131 -->
+
+  <!-- Filter 1: CI/CD Workflow Notifications → Archive -->
+  <entry>
+    <category term='filter'></category>
+    <title>GitHub CI Notifications</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='subject' value='completed|passed|failed|[CI]|workflow run'/>
+    <apps:property name='shouldArchive' value='true'/>
+    <apps:property name='label' value='GitHub/CI'/>
+    <apps:property name='shouldMarkAsRead' value='true'/>
+  </entry>
+
+  <!-- Filter 2: Dependabot Updates → Archive -->
+  <entry>
+    <category term='filter'></category>
+    <title>Dependabot Updates</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='hasTheWord' value='from:dependabot[bot] OR subject:Bump'/>
+    <apps:property name='shouldArchive' value='true'/>
+    <apps:property name='label' value='GitHub/Dependabot'/>
+    <apps:property name='shouldMarkAsRead' value='true'/>
+  </entry>
+
+  <!-- Filter 3: Release-Please PRs → Archive (auto-managed) -->
+  <entry>
+    <category term='filter'></category>
+    <title>Release-Please PRs</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='hasTheWord' value='subject:(chore(main) OR "release-please") from:github-actions[bot]'/>
+    <apps:property name='shouldArchive' value='true'/>
+    <apps:property name='label' value='GitHub/Releases'/>
+    <apps:property name='shouldMarkAsRead' value='true'/>
+  </entry>
+
+  <!-- Filter 4: PR Review Requests → Important -->
+  <entry>
+    <category term='filter'></category>
+    <title>PR Review Requests</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='subject' value='requested your review|review requested'/>
+    <apps:property name='label' value='GitHub/Review Needed'/>
+    <apps:property name='shouldAlwaysMarkAsImportant' value='true'/>
+    <apps:property name='shouldNeverSpam' value='true'/>
+  </entry>
+
+  <!-- Filter 5: Direct @mentions → Important + Star -->
+  <entry>
+    <category term='filter'></category>
+    <title>GitHub Mentions</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='subject' value='@hansbeeksma'/>
+    <apps:property name='label' value='GitHub/Mentioned'/>
+    <apps:property name='shouldAlwaysMarkAsImportant' value='true'/>
+    <apps:property name='shouldStar' value='true'/>
+  </entry>
+
+  <!-- Filter 6: Security Alerts → Critical -->
+  <entry>
+    <category term='filter'></category>
+    <title>Security Alerts</title>
+    <apps:property name='from' value='notifications@github.com'/>
+    <apps:property name='subject' value='security|vulnerability|CVE|Dependabot alert'/>
+    <apps:property name='label' value='GitHub/Security'/>
+    <apps:property name='shouldAlwaysMarkAsImportant' value='true'/>
+    <apps:property name='shouldStar' value='true'/>
+    <apps:property name='shouldNeverSpam' value='true'/>
+  </entry>
+</feed>
