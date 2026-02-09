@@ -6,7 +6,7 @@ Complete monitoring stack voor Roosevelt OPS metrics dashboard.
 
 | Component | Purpose | Service | Status |
 |-----------|---------|---------|--------|
-| **Error Tracking** | Runtime errors, crashes | Sentry | ⚙️ Setup Required |
+| **Error Tracking** | Runtime errors, crashes | Sentry | ✅ Active |
 | **Uptime Monitoring** | Availability checks | BetterStack | ⚙️ Setup Required |
 | **Performance Monitoring** | Web vitals, response times | Vercel Analytics | ✅ Native |
 | **Database Monitoring** | Connection health, queries | Supabase | ✅ Native |
@@ -74,6 +74,37 @@ Vercel will automatically redeploy with Sentry integration.
 - ✅ Performance monitoring
 - ✅ Release tracking
 - ✅ Source maps (if auth token configured)
+
+### Alert Rules (Active)
+
+Geconfigureerd via Sentry REST API op 2026-02-09.
+
+| Rule | ID | Trigger | Rate Limit | Level Filter |
+|------|----|---------|------------|--------------|
+| **Send notification for high priority issues** | 402877 | Sentry markeert issue als high priority | 30 min | - |
+| **First Seen Error in Production** | 406284 | Nieuw issue aangemaakt | 30 min | >= error |
+| **Frequency Threshold (10+ events/hour)** | 406285 | >10 events in 1 uur | 60 min | >= error |
+| **Regression Alert** | 406286 | Issue resolved → unresolved | 30 min | - |
+
+**Notificatie routing:** IssueOwners → fallback ActiveMembers (email).
+
+**CLI beheer:**
+```bash
+# Lijst alle alert rules
+curl -s -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+  "https://de.sentry.io/api/0/projects/roosevelt-ops/roosevelt-ops/rules/" \
+  | python3 -m json.tool
+
+# Verwijder rule (vervang RULE_ID)
+curl -s -X DELETE -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+  "https://de.sentry.io/api/0/projects/roosevelt-ops/roosevelt-ops/rules/RULE_ID/"
+
+# Update rule (vervang RULE_ID)
+curl -s -X PUT -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://de.sentry.io/api/0/projects/roosevelt-ops/roosevelt-ops/rules/RULE_ID/" \
+  -d '{"frequency": 60}'
+```
 
 ### Testing
 
@@ -218,13 +249,16 @@ GitHub Actions sends email notifications on workflow failures by default.
 
 ## Alert Configuration Summary
 
-| Alert Type | Service | Recipient | Condition |
-|------------|---------|-----------|-----------|
-| **Application Errors** | Sentry | Email | Any unhandled error |
-| **Downtime** | BetterStack | Email | HTTP != 200 |
-| **Performance Degradation** | Vercel Analytics | Dashboard only | CLS > 0.25 |
-| **Database Issues** | Supabase | Email | Connection > 80% |
-| **Workflow Failures** | GitHub | Email | Actions fail |
+| Alert Type | Service | Recipient | Condition | Status |
+|------------|---------|-----------|-----------|--------|
+| **First Seen Error** | Sentry | Email | New issue, level >= error | ✅ Active |
+| **High Priority Issue** | Sentry | Email | Sentry flags as high priority | ✅ Active |
+| **Frequency Spike** | Sentry | Email | >10 events/hour, level >= error | ✅ Active |
+| **Regression** | Sentry | Email | Resolved → unresolved | ✅ Active |
+| **Downtime** | BetterStack | Email | HTTP != 200 | ⚙️ Setup Required |
+| **Performance Degradation** | Vercel Analytics | Dashboard only | CLS > 0.25 | ✅ Native |
+| **Database Issues** | Supabase | Email | Connection > 80% | ✅ Native |
+| **Workflow Failures** | GitHub | Email | Actions fail | ✅ Native |
 
 ---
 
@@ -266,7 +300,8 @@ When an alert fires:
 ## Dashboard Links
 
 **Monitoring Dashboards:**
-- Sentry: https://sentry.io/organizations/roosevelt/projects/
+- Sentry: https://roosevelt-ops.sentry.io/projects/roosevelt-ops/
+- Sentry Alerts: https://roosevelt-ops.sentry.io/alerts/rules/
 - BetterStack: https://betterstack.com/uptime
 - Vercel Analytics: https://vercel.com/roosevelt-d9f64ff6/roosevelt-ops/analytics
 - Supabase: https://supabase.com/dashboard/project/hitygwkfpqdwuypyfglh/reports
@@ -329,4 +364,4 @@ Sentry.init({
 
 ---
 
-*Last Updated: 2026-02-05*
+*Last Updated: 2026-02-09*
