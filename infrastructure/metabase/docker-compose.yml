@@ -1,0 +1,73 @@
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    volumes:
+      - metabase-data:/metabase-data
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G
+          cpus: "1.5"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+
+    networks:
+      - metabase-internal
+      - caddy-external
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+    environment:
+      - DOMAIN=${DOMAIN}
+
+    depends_on:
+      metabase:
+        condition: service_healthy
+
+    networks:
+      - caddy-external
+
+networks:
+  metabase-internal:
+    driver: bridge
+    internal: true
+  caddy-external:
+    driver: bridge
+
+volumes:
+  metabase-data:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
