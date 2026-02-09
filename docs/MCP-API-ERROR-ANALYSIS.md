@@ -138,32 +138,20 @@ grep -c "tengu_mcp_tool_search" ~/.claude.json
 # Verwacht: <50k tokens bij sessie start (zonder volledige tool loading)
 ```
 
-### 3. MEDIUM - Per-Project MCP Server Configuratie (30 min)
+### 3. MEDIUM - Per-Project MCP Server Configuratie (30 min) ✅ DONE (2026-02-09)
 
-Configureer per-project welke MCP servers geladen worden via `.claude/settings.json` in project root:
+Alle 4 projecten geconfigureerd met project-specifieke `.claude/settings.json`:
 
-**Profiel: Core (altijd aan)**
-- github, memory, context7, plane, eslint, filesystem
+| Project | Enabled | Disabled | Project-specifiek |
+|---------|---------|----------|-------------------|
+| vino12 | 12 | 19 | +vc (Vercel), +supabase, +playwright |
+| roosevelt-ops | 12 | 19 | +docker, +hetzner, +slack |
+| vetteshirts | 12 | 19 | +vc, +supabase, +playwright |
+| h2ww-platform | 13 | 18 | +docker, +supabase, +playwright, +slack |
 
-**Profiel: Development (per project)**
-- docker, playwright, supabase, sentry
+**Core servers (altijd aan):** github, memory, context7, plane, eslint, filesystem, bs, seq, sentry
 
-**Profiel: Optional (on-demand)**
-- vercel, hetzner, blender, gemini, openai, figma-*, brave-search, exa, perplexity
-
-**Implementatie per project:**
-
-```jsonc
-// ~/Development/products/vino12/.claude/settings.json
-{
-  "mcpServers": {
-    // Disable servers not needed for this project
-    "vercel": { "disabled": true },
-    "hetzner": { "disabled": true },
-    "blender": { "disabled": true }
-  }
-}
-```
+**Nieuw disabled (voorheen onnodig enabled):** huggingface, notebooklm, exa, perplexity + project-specifieke servers
 
 ### 4. MEDIUM - Recovery Procedures Documenteren (15 min)
 
