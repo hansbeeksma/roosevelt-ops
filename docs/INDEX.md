@@ -44,6 +44,7 @@ Standard Operating Procedures en operational excellence.
 
 - [Operations Overview](operations/README.md) - Overzicht van alle procedures
 - [Client Onboarding](operations/client-onboarding.md) - Van eerste contact tot kickoff
+- [Team Onboarding](operations/team-onboarding.md) - Nieuw teamlid van dag 1 tot productief
 - [Project Initiation](operations/project-initiation.md) - Project setup workflow
 - [Communication Protocols](operations/communication-protocols.md) - Internal & client comms
 - [Quality Assurance](operations/quality-assurance.md) - QA checklist en review proces
@@ -57,6 +58,9 @@ Herbruikbare templates voor dagelijks werk.
 - [Project Brief](templates/project-brief.md) - Initial project scoping document
 - [Status Report](templates/status-report.md) - Weekly/monthly status updates
 - [Technical Specification](templates/technical-specification.md) - Technical design docs
+- [API Reference](templates/api-reference.md) - API endpoint documentatie template
+- [How-To Guide](templates/how-to-guide.md) - Stap-voor-stap handleiding template
+- [Onboarding Checklist](templates/onboarding-checklist.md) - Team onboarding checklist
 
 ---
 
@@ -82,20 +86,10 @@ Deze documentatie volgt **docs-as-code** principes:
 
 ### Contributing
 
-1. Fork repository
-2. Create feature branch
-3. Update documentation
-4. Submit pull request
-5. Review & merge
-
-### Style Guidelines
-
-- **Professional but approachable** tone
-- **Clear actionable steps**
-- **Visual hierarchy** with markdown
-- **Consistent formatting** throughout
-- **Active voice** preferred
-- **Short sentences** for clarity
+Zie [CONTRIBUTING.md](CONTRIBUTING.md) voor de volledige contributie guide, inclusief:
+- Vale linter setup en regels
+- Doc freshness audit
+- Review proces en PR checklist
 
 ---
 
@@ -104,6 +98,8 @@ Deze documentatie volgt **docs-as-code** principes:
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-02-03 | 1.0.0 | Initial documentation structure |
+| 2026-02-09 | 1.1.0 | Added Vale linter, doc freshness audit, contributing guide, new templates |
+| 2026-02-09 | 1.2.0 | Added team onboarding SOP and onboarding checklist template |
 
 ---
 
@@ -115,5 +111,5 @@ Deze documentatie volgt **docs-as-code** principes:
 
 ---
 
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-09*
 *Documentation managed by: Technical Writing Department*

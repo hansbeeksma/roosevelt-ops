@@ -20,6 +20,12 @@ Deze directory bevat alle Standard Operating Procedures (SOPs) voor Roosevelt op
 | [Project Initiation](project-initiation.md) | Setup project infrastructure | Start of every project |
 | [Deliverable Review](deliverable-review.md) | Final QA before client delivery | Before any client handoff |
 
+### Team Lifecycle
+
+| SOP | Purpose | When to Use |
+|-----|---------|-------------|
+| [Team Onboarding](team-onboarding.md) | From signed contract to productive contributor | New team member joins |
+
 ### Communication
 
 | SOP | Purpose | When to Use |
@@ -76,7 +82,7 @@ Links to relevant docs
 
 ### For Client Work
 
-1. Start with [Client Onboarding](client-onboarding.md)
+1. Start with [Client Onboarding](client-onboarding.md) or [Team Onboarding](team-onboarding.md)
 2. Apply [Communication Protocols](communication-protocols.md)
 3. Use [Quality Assurance](quality-assurance.md) before delivery
 4. Finish with [Deliverable Review](deliverable-review.md)
