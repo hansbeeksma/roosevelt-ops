@@ -1,0 +1,9 @@
+extends: existence
+message: "Found TODO/FIXME in documentation: '%s'. Track in Plane instead."
+level: warning
+scope: raw
+tokens:
+  - 'TODO[:\s]'
+  - 'FIXME[:\s]'
+  - 'HACK[:\s]'
+  - 'XXX[:\s]'

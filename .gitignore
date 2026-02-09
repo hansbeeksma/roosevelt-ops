@@ -53,3 +53,7 @@ Thumbs.db
 .claude/
 .cleo/
 claudedocs/
+
+# Vale (synced packages - regenerate with `vale sync`)
+.github/styles/Google/
+.github/styles/write-good/

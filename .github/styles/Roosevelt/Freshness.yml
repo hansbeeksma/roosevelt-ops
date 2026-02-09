@@ -1,0 +1,7 @@
+extends: existence
+message: "Document has no 'Last updated' date. Add '*Last updated: YYYY-MM-DD*' at the bottom."
+level: suggestion
+scope: raw
+nonword: true
+tokens:
+  - '^(?![\s\S]*[Ll]ast\s+updated)'

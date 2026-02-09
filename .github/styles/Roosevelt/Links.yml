@@ -1,0 +1,9 @@
+extends: existence
+message: "Found placeholder link '%s'. Replace with actual URL."
+level: error
+scope: raw
+tokens:
+  - '\[.*?\]\(#?\)'
+  - '\[.*?\]\(TBD\)'
+  - '\[.*?\]\(TODO\)'
+  - 'https?://example\.com'

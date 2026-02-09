@@ -1,0 +1,23 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: warning
+ignorecase: true
+swap:
+  repo: repository
+  repos: repositories
+  dont: don't
+  wont: won't
+  cant: can't
+  config: configuration
+  configs: configurations
+  dev: development
+  devs: developers
+  prod: production
+  env: environment
+  infra: infrastructure
+  auth: authentication
+  authn: authentication
+  authz: authorization
+  db: database
+  msg: message
+  impl: implementation

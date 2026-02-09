@@ -1,0 +1,8 @@
+extends: existence
+message: "Use sentence case for headings: '%s'"
+level: warning
+scope: heading
+nonword: true
+# Flag ALL CAPS headings (3+ consecutive uppercase words)
+tokens:
+  - '[A-Z]{2,}\s+[A-Z]{2,}\s+[A-Z]{2,}'

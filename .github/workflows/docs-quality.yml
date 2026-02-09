@@ -1,0 +1,81 @@
+name: Documentation Quality
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'templates/**'
+      - '.vale.ini'
+      - '.github/styles/**'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'templates/**'
+
+jobs:
+  vale-lint:
+    name: Vale Linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: errata-ai/vale-action@v2
+        with:
+          files: docs/
+          vale_flags: "--no-exit"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  freshness-audit:
+    name: Doc Freshness Audit
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run freshness audit
+        run: |
+          chmod +x scripts/doc-freshness-audit.sh
+          ./scripts/doc-freshness-audit.sh --json > freshness-report.json || true
+          cat freshness-report.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-freshness-report
+          path: freshness-report.json
+          retention-days: 30
+
+  link-check:
+    name: Link Checker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check internal links
+        run: |
+          echo "Checking internal markdown links..."
+          BROKEN=0
+          while IFS= read -r file; do
+            dir=$(dirname "$file")
+            grep -oP '\[.*?\]\(\K[^)]+' "$file" 2>/dev/null | while read -r link; do
+              # Skip external URLs, anchors, and mailto
+              if [[ "$link" =~ ^https?:// ]] || [[ "$link" =~ ^# ]] || [[ "$link" =~ ^mailto: ]]; then
+                continue
+              fi
+              # Remove anchor from link
+              clean_link="${link%%#*}"
+              if [[ -n "$clean_link" ]] && [[ ! -f "$dir/$clean_link" ]]; then
+                echo "BROKEN: $file -> $link"
+                BROKEN=$((BROKEN + 1))
+              fi
+            done
+          done < <(find docs/ templates/ -name "*.md" 2>/dev/null)
+          if [[ $BROKEN -gt 0 ]]; then
+            echo "Found $BROKEN broken link(s)"
+            exit 1
+          fi
+          echo "All internal links are valid."
