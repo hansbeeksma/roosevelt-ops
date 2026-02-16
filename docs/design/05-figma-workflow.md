@@ -374,6 +374,35 @@ mcp__plane__create_label({
 - Copy changes with visual impact
 - Icon updates
 
+### CLEO Task Structure for Designs
+
+**Single Task (Simple Designs):**
+```bash
+# Button, card, single component variants
+cleo add "Design primary CTA button" --phase core --labels design
+# → Localhost testing implicit, complete after Figma import
+cleo complete T001
+```
+
+**Epic with Subtasks (Complex Designs):**
+```bash
+# Full pages, multi-component flows
+cleo add "Design authentication login page" --phase core --type epic --labels design
+cleo add "[T001] Generate HTML/CSS" --parent T001 --type subtask --size small
+cleo add "[T001] Localhost iteration (5+ versions)" --parent T001 --type subtask --size medium
+cleo add "[T001] Import to Figma" --parent T001 --type subtask --size small
+
+# Complete subtasks individually
+cleo complete T002  # HTML generation done
+cleo complete T003  # Localhost approved
+cleo complete T004  # Figma import done
+# → Parent T001 auto-completes (if hierarchy.autoCompleteParent enabled)
+```
+
+**Decision Criteria:**
+- **Single task:** <30 min work, 1-2 localhost iterations
+- **Epic:** >1 hour work, 5+ localhost iterations, multi-component
+
 ---
 
 ## Troubleshooting
