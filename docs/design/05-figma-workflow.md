@@ -1,6 +1,6 @@
 ---
 project: "Roosevelt OPS"
-version: "2.0.0"
+version: "2.0.1"
 last_updated: "2026-02-16"
 maturity: "active"
 status: "production"
