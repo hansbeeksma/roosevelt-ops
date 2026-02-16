@@ -22,6 +22,11 @@ Merkidentiteit, visuele richtlijnen en brand assets.
 - [Brand Guidelines](brand/guidelines.md) - *In ontwikkeling (Wave 2)*
 - [Brand Assets](brand/assets.md) - *In ontwikkeling (Wave 2)*
 
+**Design Workflows:**
+- [Design System](design/01-design-system.md) - Tokens, typography, spacing, colors
+- [Design-Dev Handoff](design/04-design-dev-handoff.md) - Handoff proces en checklist
+- [Figma Workflow](design/05-figma-workflow.md) - **Claude → Figma pipeline** 🆕
+
 ### 🚀 Products & Services
 
 Overzicht van producten, diensten en portfolio.

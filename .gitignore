@@ -57,3 +57,18 @@ claudedocs/
 # Vale (synced packages - regenerate with `vale sync`)
 .github/styles/Google/
 .github/styles/write-good/
+
+# Design Artifacts (large binary files)
+designs/generated/**/*.png
+designs/generated/**/*.jpg
+designs/generated/**/*.jpeg
+designs/generated/**/*.gif
+designs/generated/**/*.svg
+designs/assets/**/*.sketch
+designs/assets/**/*.psd
+designs/assets/**/*.fig
+designs/assets/**/*.ai
+
+# Keep HTML artifacts (small, text-based)
+!designs/generated/**/*.html
+!designs/generated/**/*.css

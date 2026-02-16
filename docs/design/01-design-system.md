@@ -1,12 +1,12 @@
 ---
 project: "Roosevelt OPS"
-version: "1.0.0"
-last_updated: "2026-02-08"
+version: "2.0.0"
+last_updated: "2026-02-16"
 maturity: "foundation"
-status: "draft"
+status: "active"
 owner: "Sam Swaab"
-figma_url: ""
-design_tokens_path: ""
+figma_url: "https://figma.com/file/D9lhL1k3Hz3RuBXPyZ4zXJ/Claude-Designs"
+design_tokens_path: "lib/design-tokens.ts"
 ---
 
 # Roosevelt OPS Design System
@@ -166,6 +166,101 @@ Roosevelt OPS is primarily a documentation and operations hub. Components are mi
 | Hero Section | Planned | Landing page hero |
 | Service Card | Planned | AI Strategy / Digital Product cards |
 | Contact Form | Planned | Basic contact form |
+
+---
+
+## Figma Integration
+
+**Design File:** [Claude-Designs on Figma](https://figma.com/file/D9lhL1k3Hz3RuBXPyZ4zXJ/Claude-Designs)
+
+**Workflow:** See [05-figma-workflow.md](05-figma-workflow.md) voor de volledige Claude → Figma workflow.
+
+**Design Tokens:**
+- Source: Figma Variables (planned)
+- Code: `lib/design-tokens.ts`
+- Import: Via `figma-workflow` skill
+
+### Token Export
+
+Design tokens worden automatisch geëxporteerd van Figma naar TypeScript:
+
+```typescript
+// lib/design-tokens.ts (auto-generated)
+export const tokens = {
+  colors: {
+    midnight: '#0A0F1A',
+    slate: '#334155',
+    cloud: '#F8FAFC',
+    white: '#FFFFFF',
+    electric: '#3B82F6',
+    electricDark: '#1D4ED8',
+    electricLight: '#DBEAFE',
+    success: '#059669',
+    error: '#DC2626',
+    warning: '#D97706',
+    info: '#3B82F6',
+  },
+  typography: {
+    fontFamilies: {
+      heading: "'Space Grotesk', sans-serif",
+      body: "'Inter', sans-serif",
+    },
+    fontSize: {
+      xs: '12px',
+      sm: '14px',
+      base: '16px',
+      lg: '20px',
+      xl: '25px',
+      '2xl': '31px',
+      '3xl': '39px',
+      '4xl': '49px',
+      '5xl': '61px',
+    },
+  },
+  spacing: {
+    space1: '4px',
+    space2: '8px',
+    space3: '12px',
+    space4: '16px',
+    space6: '24px',
+    space8: '32px',
+    space12: '48px',
+    space16: '64px',
+    space24: '96px',
+  },
+  borderRadius: {
+    sm: '6px',
+    md: '8px',
+    lg: '12px',
+  },
+  shadows: {
+    sm: '0 1px 2px rgba(0,0,0,0.05)',
+    md: '0 4px 6px rgba(0,0,0,0.07)',
+    lg: '0 10px 15px rgba(0,0,0,0.1)',
+  },
+}
+```
+
+### Usage in Components
+
+```tsx
+import { tokens } from '@/lib/design-tokens'
+
+// Button component example
+<button
+  style={{
+    backgroundColor: tokens.colors.electric,
+    color: tokens.colors.white,
+    fontFamily: tokens.typography.fontFamilies.body,
+    fontSize: tokens.typography.fontSize.base,
+    padding: `${tokens.spacing.space3} ${tokens.spacing.space6}`,
+    borderRadius: tokens.borderRadius.sm,
+    boxShadow: tokens.shadows.sm,
+  }}
+>
+  Primary Button
+</button>
+```
 
 ---
 

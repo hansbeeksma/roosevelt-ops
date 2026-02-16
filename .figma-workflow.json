@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "project": "roosevelt-ops",
+  "mcpServers": {
+    "fig": {
+      "enabled": true,
+      "authType": "oauth",
+      "capabilities": ["programmatic", "pages", "screenshots"]
+    },
+    "htd": {
+      "enabled": true,
+      "authType": "none",
+      "fallback": true
+    }
+  },
+  "figma": {
+    "fileKey": "D9lhL1k3Hz3RuBXPyZ4zXJ",
+    "fileName": "Claude-Designs",
+    "pageStrategy": "per-design"
+  },
+  "taskManager": "plane",
+  "planeProject": "ROOSE",
+  "planeProjectId": "c7d0b955-a97f-40b6-be03-7c05c2d0b1c3",
+  "planeLabels": {
+    "design": true,
+    "uiDesign": "ui-design",
+    "uxResearch": "ux-research"
+  },
+  "output": {
+    "artifactsDir": "designs/generated",
+    "namingPattern": "{date}-{name}",
+    "includeTimestamp": true
+  },
+  "workflow": {
+    "mode": "automated",
+    "pagePerDesign": true,
+    "verifyImport": true,
+    "autoCommit": false,
+    "responsiveBreakpoints": ["mobile", "tablet", "desktop"]
+  },
+  "designSystem": {
+    "tokensPath": "lib/design-tokens.ts",
+    "docsPath": "docs/design/01-design-system.md"
+  }
+}
