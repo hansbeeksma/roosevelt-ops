@@ -350,7 +350,8 @@ mcp__plane__create_label({
 |-------|---------|
 | **Backlog** | Issue created |
 | **In Progress** | `/figma-workflow design "..."` starts |
-| **In Review** | Design imported to Figma |
+| **Localhost Testing** | HTML generated, ready for local approval |
+| **In Review** | Design imported to Figma (after localhost approval) |
 | **Done** | Design approved + implemented |
 
 ### Complex vs Simple Designs
