@@ -1,6 +1,6 @@
 ---
 project: "Roosevelt OPS"
-version: "1.0.0"
+version: "2.0.0"
 last_updated: "2026-02-16"
 maturity: "active"
 status: "production"
@@ -10,7 +10,7 @@ figma_url: "https://figma.com/file/D9lhL1k3Hz3RuBXPyZ4zXJ/Claude-Designs"
 
 # Roosevelt OPS Figma Workflow
 
-> Claude → HTML → Figma pipeline voor design generation
+> Claude → HTML → **Localhost Prototype** → Figma pipeline voor design generation
 
 **Config:** `.figma-workflow.json` (project root)
 **MCP Server:** `fig` (OAuth) + `htd` (fallback)
@@ -23,9 +23,10 @@ figma_url: "https://figma.com/file/D9lhL1k3Hz3RuBXPyZ4zXJ/Claude-Designs"
 | Actie | Command |
 |-------|---------|
 | Generate design | `/figma-workflow design "Button component"` |
+| **Test locally** | `open designs/generated/{file}.html` of `python -m http.server 8000` |
+| Push to Figma | Via htd MCP (after local approval) |
 | Check config | `figma-workflow-config get` |
 | Validate setup | `figma-workflow-config validate` |
-| Manual mode | `/figma-workflow design "..." --mode manual` |
 
 ---
 
@@ -69,7 +70,73 @@ Labels: design
 - Applies 8px grid spacing
 - Uses defined color palette (midnight, slate, cloud, electric)
 
-### 3. Figma Import (Automated)
+### 3. **Localhost Prototype** (Rapid Iteration) 🆕
+
+**⚡ Nieuwe fase voor snellere design keuzes**
+
+Voordat het design naar Figma gaat, eerst lokaal testen voor snelle iteratie:
+
+```bash
+# Optie A: Direct in browser openen
+open designs/generated/2026-02-16-auth-login.html
+
+# Optie B: Via localhost server (aanbevolen voor responsive testing)
+cd designs/generated
+python -m http.server 8000
+# Open: http://localhost:8000/2026-02-16-auth-login.html
+
+# Optie C: Via npm (als Next.js/React project)
+npm run dev
+# Navigeer naar artifact in /public of /static
+```
+
+**Voordelen:**
+- ⚡ **Instant feedback** - Zie wijzigingen direct in browser
+- 🔄 **Snelle iteratie** - Edit HTML/CSS → Refresh → Herhaal
+- 📱 **Responsive testing** - Test alle breakpoints (320px, 768px, 1024px+)
+- 🎨 **Design keuzes** - Kleuren, spacing, typography tweaken zonder Figma
+- 🖱️ **Interactie** - Hover states, transitions testen
+- ♿ **Accessibility** - Screen reader, keyboard navigatie testen
+
+**Iteratie Flow:**
+```bash
+# 1. Open in browser
+open designs/generated/2026-02-16-auth-login.html
+
+# 2. Maak aanpassingen
+/figma-workflow iterate "Make button larger, change color to electric-dark"
+# → Updates HTML file
+
+# 3. Refresh browser (Cmd+R)
+# → See changes instantly
+
+# 4. Herhaal tot tevreden
+# → Multiple iterations zonder Figma roundtrip
+
+# 5. Klaar? Push naar Figma
+# → Ga naar stap 4
+```
+
+**Design Feedback Checklist:**
+- [ ] Logo/typography correct (Space Grotesk + Inter)
+- [ ] Kleuren matchen design system (midnight, slate, cloud, electric)
+- [ ] 8px grid spacing toegepast
+- [ ] Responsive op alle breakpoints (320px, 768px, 1024px+)
+- [ ] Hover states werkend
+- [ ] Focus states zichtbaar (keyboard navigation)
+- [ ] Contrast ratios WCAG AAA (7:1)
+- [ ] No horizontal scroll op mobile
+
+**Browser DevTools Tips:**
+```javascript
+// Toggle responsive mode: Cmd+Shift+M (Chrome/Firefox)
+// Inspect element: Right-click → Inspect
+// Edit CSS live: Styles panel → Edit values
+// Test accessibility: Lighthouse → Accessibility audit
+// Check contrast: DevTools → Color picker → Contrast ratio
+```
+
+### 4. Figma Import (After Local Approval)
 
 **With fig MCP (OAuth):**
 ```bash
@@ -89,7 +156,7 @@ Labels: design
 4. Manual verification
 ```
 
-### 4. Post-Import Actions
+### 5. Post-Import Actions
 
 **Plane Integration:**
 ```javascript
@@ -125,9 +192,22 @@ Task: ROOSE-XX
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
-### 5. Iteration
+### 6. Iteration
 
-**Update existing design:**
+**Localhost Iteration (Recommended):**
+```bash
+# 1. Make changes locally first
+/figma-workflow iterate "Make CTA button larger, change color to electric-dark"
+
+# 2. Test in browser
+open designs/generated/2026-02-16-auth-login.html
+
+# 3. Satisfied? Push to Figma
+# → Open Figma file
+# → Run htd import again (replaces previous)
+```
+
+**Figma Direct Update (Alternative):**
 ```bash
 # Get node ID from Figma
 /figma-workflow design "Make CTA button larger, change color to electric-dark" \
@@ -138,6 +218,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 # 2. Replaces existing design
 # 3. Figma version history preserved
 ```
+
+**Aanbevolen**: Gebruik localhost voor iteraties, push naar Figma alleen als finalized.
 
 ---
 
