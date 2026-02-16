@@ -78,11 +78,14 @@ Plane Issue → Claude Design → Figma → Code → Review → Merge
 ### Design Handoff Checklist
 
 **Before handoff:**
+- [ ] **Localhost prototype tested** (see 05-figma-workflow.md step 3)
+  - [ ] Responsive at 320px, 768px, 1024px+
+  - [ ] WCAG AAA contrast ratios (verified via DevTools)
+  - [ ] Keyboard navigation (Tab order, focus states)
+  - [ ] No horizontal scroll on mobile
 - [ ] Design in Figma (Claude-Designs file)
 - [ ] HTML artifact in `designs/generated/`
-- [ ] Design tokens used (no hardcoded values)
-- [ ] Responsive breakpoints tested (320px, 768px, 1024px+)
-- [ ] Accessibility checks passed (WCAG AA minimum)
+- [ ] Design tokens used (verified via browser inspection)
 - [ ] Typography follows system (Space Grotesk + Inter)
 - [ ] 8px grid spacing enforced
 
