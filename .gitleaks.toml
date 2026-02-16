@@ -87,6 +87,7 @@ paths = [
   '''\.github/workflows/''',
   '''docs/IDE-SECURITY-SETUP\.md''',
   '''docs/SECURITY\.md''',  # Security documentation with examples
+  '''docs/SETUP\.md''',  # Setup documentation with example JWT placeholders
   '''\.figma-workflow\.json''',  # Figma file keys (public URLs)
   '''docs/design/05-figma-workflow\.md''',  # Design workflow with Figma file keys
 ]
