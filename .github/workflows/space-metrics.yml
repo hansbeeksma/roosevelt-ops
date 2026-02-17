@@ -1,0 +1,187 @@
+name: SPACE Metrics Collection
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Every Monday at 3 AM UTC (weekly)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Number of days to collect metrics for'
+        required: false
+        default: '7'
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  collect-performance-metrics:
+    name: Performance & Activity Metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Collect PR Throughput
+        id: throughput
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DAYS="${{ github.event.inputs.days || '7' }}"
+          SINCE=$(date -u -d "${DAYS} days ago" +"%Y-%m-%dT%H:%M:%SZ")
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          REPOS="hansbeeksma/roosevelt-ops hansbeeksma/vino12 hansbeeksma/h2ww-platform hansbeeksma/vetteshirts"
+
+          TOTAL_MERGED=0
+          TOTAL_COMMITS=0
+          TOTAL_PRS_CREATED=0
+          TOTAL_ADDITIONS=0
+          TOTAL_DELETIONS=0
+
+          for REPO in $REPOS; do
+            echo "--- ${REPO} ---"
+
+            # PRs merged
+            MERGED=$(gh api "repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=100" \
+              --jq "[.[] | select(.merged_at != null and .merged_at >= \"${SINCE}\")] | length" 2>/dev/null || echo 0)
+            echo "  PRs merged: ${MERGED}"
+            TOTAL_MERGED=$((TOTAL_MERGED + MERGED))
+
+            # Commits
+            COMMITS=$(gh api "repos/${REPO}/commits?since=${SINCE}&per_page=100" \
+              --jq 'length' 2>/dev/null || echo 0)
+            echo "  Commits: ${COMMITS}"
+            TOTAL_COMMITS=$((TOTAL_COMMITS + COMMITS))
+
+            # PRs created
+            CREATED=$(gh api "repos/${REPO}/pulls?state=all&sort=created&direction=desc&per_page=100" \
+              --jq "[.[] | select(.created_at >= \"${SINCE}\")] | length" 2>/dev/null || echo 0)
+            echo "  PRs created: ${CREATED}"
+            TOTAL_PRS_CREATED=$((TOTAL_PRS_CREATED + CREATED))
+          done
+
+          echo "total_merged=${TOTAL_MERGED}" >> $GITHUB_OUTPUT
+          echo "total_commits=${TOTAL_COMMITS}" >> $GITHUB_OUTPUT
+          echo "total_prs_created=${TOTAL_PRS_CREATED}" >> $GITHUB_OUTPUT
+          echo "period_days=${DAYS}" >> $GITHUB_OUTPUT
+
+      - name: Collect PR Review Metrics
+        id: reviews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DAYS="${{ github.event.inputs.days || '7' }}"
+          SINCE=$(date -u -d "${DAYS} days ago" +"%Y-%m-%dT%H:%M:%SZ")
+
+          REPOS="hansbeeksma/roosevelt-ops hansbeeksma/vino12 hansbeeksma/h2ww-platform hansbeeksma/vetteshirts"
+
+          TOTAL_REVIEWS=0
+          TOTAL_REVIEW_HOURS=0
+          REVIEW_COUNT=0
+
+          for REPO in $REPOS; do
+            # Get recently merged PRs
+            PRS=$(gh api "repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=10" \
+              --jq "[.[] | select(.merged_at != null and .merged_at >= \"${SINCE}\")] | .[].number" 2>/dev/null || true)
+
+            for PR_NUM in $PRS; do
+              [ -z "$PR_NUM" ] && continue
+
+              # Get reviews for this PR
+              REVIEW_DATA=$(gh api "repos/${REPO}/pulls/${PR_NUM}/reviews" 2>/dev/null || echo "[]")
+              NUM_REVIEWS=$(echo "$REVIEW_DATA" | jq 'length')
+              TOTAL_REVIEWS=$((TOTAL_REVIEWS + NUM_REVIEWS))
+
+              # Get first review time for turnaround calculation
+              FIRST_REVIEW=$(echo "$REVIEW_DATA" | jq -r '.[0].submitted_at // empty')
+              PR_CREATED=$(gh api "repos/${REPO}/pulls/${PR_NUM}" --jq '.created_at' 2>/dev/null || true)
+
+              if [ -n "$FIRST_REVIEW" ] && [ -n "$PR_CREATED" ]; then
+                REVIEW_EPOCH=$(date -d "$FIRST_REVIEW" +%s 2>/dev/null || echo 0)
+                CREATED_EPOCH=$(date -d "$PR_CREATED" +%s 2>/dev/null || echo 0)
+
+                if [ "$REVIEW_EPOCH" -gt 0 ] && [ "$CREATED_EPOCH" -gt 0 ]; then
+                  HOURS=$(( (REVIEW_EPOCH - CREATED_EPOCH) / 3600 ))
+                  TOTAL_REVIEW_HOURS=$((TOTAL_REVIEW_HOURS + HOURS))
+                  REVIEW_COUNT=$((REVIEW_COUNT + 1))
+                fi
+              fi
+            done
+          done
+
+          AVG_REVIEW_HOURS=0
+          if [ "$REVIEW_COUNT" -gt 0 ]; then
+            AVG_REVIEW_HOURS=$((TOTAL_REVIEW_HOURS / REVIEW_COUNT))
+          fi
+
+          echo "total_reviews=${TOTAL_REVIEWS}" >> $GITHUB_OUTPUT
+          echo "avg_review_hours=${AVG_REVIEW_HOURS}" >> $GITHUB_OUTPUT
+          echo "review_count=${REVIEW_COUNT}" >> $GITHUB_OUTPUT
+
+      - name: Push to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          WEEK_START=$(date -u -d "last monday" +"%Y-%m-%d")
+
+          # Push performance metrics
+          curl -sf -X POST "${SUPABASE_URL}/rest/v1/space_performance" \
+            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{
+              \"date\": \"${NOW}\",
+              \"pr_review_depth\": ${{ steps.reviews.outputs.total_reviews }},
+              \"prs_merged\": ${{ steps.throughput.outputs.total_merged }}
+            }" && echo "Pushed performance metrics" || echo "Failed to push performance"
+
+          # Push activity metrics
+          curl -sf -X POST "${SUPABASE_URL}/rest/v1/space_activity" \
+            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{
+              \"user_id\": \"aggregate\",
+              \"date\": \"${NOW}\",
+              \"commits_count\": ${{ steps.throughput.outputs.total_commits }},
+              \"prs_created\": ${{ steps.throughput.outputs.total_prs_created }},
+              \"prs_reviewed\": ${{ steps.reviews.outputs.total_reviews }},
+              \"code_additions\": 0,
+              \"code_deletions\": 0
+            }" && echo "Pushed activity metrics" || echo "Failed to push activity"
+
+          # Push collaboration metrics
+          curl -sf -X POST "${SUPABASE_URL}/rest/v1/space_collaboration" \
+            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{
+              \"user_id\": \"aggregate\",
+              \"week_start\": \"${WEEK_START}\",
+              \"pr_comments\": ${{ steps.reviews.outputs.total_reviews }},
+              \"code_reviews_given\": ${{ steps.reviews.outputs.review_count }},
+              \"avg_review_turnaround_hours\": ${{ steps.reviews.outputs.avg_review_hours }}
+            }" && echo "Pushed collaboration metrics" || echo "Failed to push collaboration"
+
+      - name: Summary
+        run: |
+          echo "### SPACE Metrics Collected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Period**: Last ${{ steps.throughput.outputs.period_days }} days" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Dimension | Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | PRs Merged | ${{ steps.throughput.outputs.total_merged }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Activity | Commits | ${{ steps.throughput.outputs.total_commits }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Activity | PRs Created | ${{ steps.throughput.outputs.total_prs_created }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Communication | Reviews Given | ${{ steps.reviews.outputs.review_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Communication | Avg Review Time | ${{ steps.reviews.outputs.avg_review_hours }}h |" >> $GITHUB_STEP_SUMMARY
