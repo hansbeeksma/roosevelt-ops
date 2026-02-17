@@ -54,6 +54,9 @@ Thumbs.db
 .cleo/
 claudedocs/
 
+# Cursor (symlink to AGENTS.md)
+.cursorrules
+
 # Vale (synced packages - regenerate with `vale sync`)
 .github/styles/Google/
 .github/styles/write-good/
