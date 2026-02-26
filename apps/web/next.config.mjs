@@ -1,17 +1,15 @@
-const { withSentryConfig } = require('@sentry/nextjs')
+import { withSentryConfig } from '@sentry/nextjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: '2mb',
     },
     // Client-side navigation caching (ROOSE-36)
-    // staleTimes controls how long client-side cache is kept
     staleTimes: {
-      dynamic: 30, // 30s for dynamic routes (auth-gated pages)
-      static: 300, // 5 min for static routes
+      dynamic: 30,    // 30s for dynamic routes (auth-gated pages)
+      static: 300,    // 5 min for static routes
     },
   },
 
@@ -64,12 +62,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://*.clerk.accounts.dev https://clerk.com https://*.clerk.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob: https://img.clerk.com",
+              "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://vercel.live https://*.clerk.accounts.dev https://api.clerk.com",
-              "frame-src 'self' https://clerk.com https://*.clerk.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://vercel.live",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -100,4 +97,4 @@ const sentryWebpackPluginOptions = {
   disableLogger: true,
 }
 
-module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions)
