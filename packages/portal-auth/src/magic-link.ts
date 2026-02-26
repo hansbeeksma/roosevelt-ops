@@ -2,8 +2,8 @@ import { clerkClient } from '@clerk/nextjs/server'
 import type { MagicLinkInviteParams, MagicLinkInviteResult } from './types'
 
 const DEFAULT_ROLE = 'client'
-const DEFAULT_EXPIRES_DAYS = 30
-const MS_PER_DAY = 24 * 60 * 60 * 1000
+const DEFAULT_EXPIRES_HOURS = 24
+const MS_PER_HOUR = 60 * 60 * 1000
 
 /**
  * Create a magic link invitation for a client to join the portal.
@@ -22,7 +22,7 @@ export async function createMagicLinkInvite(
     organizationId,
     projectIds,
     role = DEFAULT_ROLE,
-    expiresInDays = DEFAULT_EXPIRES_DAYS,
+    expiresInHours = DEFAULT_EXPIRES_HOURS,
   } = params
 
   const clerk = await clerkClient()
@@ -34,7 +34,7 @@ export async function createMagicLinkInvite(
     publicMetadata: {
       portalRole: role,
       projectIds,
-      expiresAt: new Date(Date.now() + expiresInDays * MS_PER_DAY).toISOString(),
+      expiresAt: new Date(Date.now() + expiresInHours * MS_PER_HOUR).toISOString(),
     },
   })
 

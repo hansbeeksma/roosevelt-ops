@@ -20,7 +20,7 @@ export interface MagicLinkInviteParams {
   readonly organizationId: string
   readonly projectIds: readonly string[]
   readonly role?: string
-  readonly expiresInDays?: number
+  readonly expiresInHours?: number
 }
 
 export interface MagicLinkInviteResult {
