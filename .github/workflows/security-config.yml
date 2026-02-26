@@ -146,8 +146,8 @@ jobs:
         run: |
           echo "🔍 Checking for CORS misconfigurations..."
 
-          # Check API routes for open CORS (monorepo: apps/web/app/api/ or legacy: app/api/)
-          CORS_ALL=$(grep -rn "Access-Control-Allow-Origin.*\*" apps/web/app/api/ app/api/ --include="*.ts" --include="*.js" 2>/dev/null || true)
+          # Check API routes for open CORS (monorepo: apps/web/src/app/api/, apps/web/app/api/, or legacy: app/api/)
+          CORS_ALL=$(grep -rn "Access-Control-Allow-Origin.*\*" apps/web/src/app/api/ apps/web/app/api/ app/api/ --include="*.ts" --include="*.js" 2>/dev/null || true)
 
           if [ -n "$CORS_ALL" ]; then
             echo "⚠️  CORS set to allow all origins (*) found:"

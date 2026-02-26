@@ -18,8 +18,8 @@ importers:
         specifier: ^0.211.0
         version: 0.211.0(@opentelemetry/api@1.9.0)
       '@rooseveltops/analytics-layer':
-        specifier: file:../../shared/analytics-layer
-        version: file:../../shared/analytics-layer(@supabase/supabase-js@2.97.0)
+        specifier: workspace:*
+        version: link:packages/analytics-layer
       '@sentry/nextjs':
         specifier: ^10.38.0
         version: 10.40.0(@opentelemetry/context-async-hooks@2.5.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.5.1(@opentelemetry/api@1.9.0))(next@14.2.35(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(webpack@5.105.2)
@@ -148,6 +148,27 @@ importers:
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
+
+  apps/web: {}
+
+  packages/analytics-layer:
+    dependencies:
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.95.3
+        version: 2.97.0
+      '@vitest/coverage-v8':
+        specifier: ^4.0.0
+        version: 4.0.18(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.3.1)(jiti@1.21.7)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.3.1)(jiti@1.21.7)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/time-tracking: {}
 
@@ -1441,12 +1462,6 @@ packages:
     resolution: {integrity: sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA==}
     cpu: [x64]
     os: [win32]
-
-  '@rooseveltops/analytics-layer@file:../../shared/analytics-layer':
-    resolution: {directory: ../../shared/analytics-layer, type: directory}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@supabase/supabase-js': ^2.0.0
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
@@ -6873,11 +6888,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
-
-  '@rooseveltops/analytics-layer@file:../../shared/analytics-layer(@supabase/supabase-js@2.97.0)':
-    dependencies:
-      '@supabase/supabase-js': 2.97.0
-      zod: 3.25.76
 
   '@rtsao/scc@1.1.0': {}
 

@@ -158,7 +158,7 @@ describe('handleError', () => {
   })
 
   it('sanitizes long base64/hex strings in messages', () => {
-    const err = new AppError('Token: secret_key_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234')
+    const err = new AppError('Token: secret_key_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234') // gitleaks:allow
     const { response } = handleError(err)
     expect(response.error.message).toContain('[REDACTED]')
   })
