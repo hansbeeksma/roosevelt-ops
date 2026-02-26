@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@roosevelt/types/*": ["lib/types/*"],
+      "@roosevelt/supabase/*": ["lib/supabase/*"],
+      "@roosevelt/integrations/*": ["lib/integrations/*"],
+      "@roosevelt/ai/*": ["lib/ai/*"]
+    }
+  }
+}
