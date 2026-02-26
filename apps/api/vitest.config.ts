@@ -3,23 +3,21 @@ import path from 'path'
 
 export default defineConfig({
   test: {
-    environment: 'jsdom',
-    include: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
-    // Fastify API integration tests use apps/api/vitest.config.ts (node env)
-    exclude: ['node_modules', '.next', 'apps/api/**'],
+    environment: 'node',
+    include: ['src/test/**/*.test.ts', 'src/**/*.spec.ts'],
+    exclude: ['node_modules'],
     globals: true,
-    setupFiles: ['./test-setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['app/api/**', 'lib/**'],
+      include: ['src/**/*.ts'],
       exclude: [
         'node_modules',
-        '.next',
+        'src/test/**',
+        'src/main.ts',
         '**/*.d.ts',
         '**/*.config.*',
         '**/*.test.*',
-        'lib/supabase/**',
       ],
       thresholds: {
         statements: 80,
@@ -31,7 +29,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
 })
