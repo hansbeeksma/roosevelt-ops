@@ -178,15 +178,26 @@ Use **shared packages** with `file://` dependencies.
 
 ---
 
-## Future ADRs
+## ADR-005 t/m ADR-012
 
-**Planned:**
-- ADR-005: Lifecycle governance framework
-- ADR-006: Template variable substitution system
-- ADR-007: Compliance validation automation
+Zie `docs/decisions/` voor de volledige ADR bestanden.
+
+| ADR | Titel |
+|-----|-------|
+| [ADR-005](decisions/ADR-005.md) | Modular Monolith Architecture |
+| [ADR-006](decisions/ADR-006.md) | NX Monorepo |
+| [ADR-007](decisions/ADR-007.md) | Inngest voor Event-Driven Workflows |
+| [ADR-008](decisions/ADR-008.md) | Build vs Buy Strategy |
+| [ADR-009](decisions/ADR-009.md) | Clerk voor Authenticatie |
+| [ADR-010](decisions/ADR-010.md) | Fastify voor API Layer |
+| [ADR-011](decisions/ADR-011.md) | Twenty CRM |
+| [ADR-012](decisions/ADR-012.md) | shadcn/ui als Component Library |
+
+**Volledig overzicht:** [decisions/INDEX.md](decisions/INDEX.md)
 
 ---
 
 **See Also:**
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture overview
 - [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md) - Deployment procedures
+- [decisions/INDEX.md](decisions/INDEX.md) - Volledig ADR overzicht (001-012)
