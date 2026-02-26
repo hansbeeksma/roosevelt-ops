@@ -14,11 +14,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@roosevelt/portal-auth": [
-        "packages/portal-auth/src/index.ts"
-      ]
-    }
+    "paths": {}
   }
 }
