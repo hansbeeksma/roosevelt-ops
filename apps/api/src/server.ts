@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import securityPlugin from './plugins/security.js'
 import metricsRoutes from './modules/metrics/metrics.routes.js'
 import integrationsRoutes from './modules/integrations/integrations.routes.js'
+import aiRoutes from './modules/ai/ai.routes.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -64,20 +65,12 @@ fastify.register(metricsRoutes, { prefix: '/api/metrics' })
 // Integrations routes — MCP ecosystem status
 fastify.register(integrationsRoutes, { prefix: '/api/integrations' })
 
-// AI routes — strictest rate limit: 10 req/min per IP, 10 MB body limit
-fastify.register(
-  async (instance) => {
-    // Placeholder: AI route handlers go here or in a dedicated module
-    instance.get('/', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async () => ({
-      status: 'ai endpoint',
-    }))
-  },
-  {
-    prefix: '/api/ai',
-    // 10 MB body limit for AI routes (e.g. file uploads)
-    bodyLimit: 10 * 1024 * 1024,
-  }
-)
+// AI routes — RAG query + document ingestion, 10 MB body limit
+fastify.register(aiRoutes, {
+  prefix: '/api/ai',
+  // 10 MB body limit for AI routes (e.g. large document ingestion payloads)
+  bodyLimit: 10 * 1024 * 1024,
+})
 
 const start = async (): Promise<void> => {
   try {
