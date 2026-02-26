@@ -72,6 +72,32 @@ description = "Shopify Access Token"
 regex = '''shpat_[a-fA-F0-9]{32}'''
 tags = ["shopify", "secret"]
 
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key pattern (overrides default with test-file allowlist)"
+regex = '''(?i)(api[_-]?key|apikey|api[_-]?secret)['\":\s=]+['\"a-zA-Z0-9/\-_]{16,}'''
+tags = ["generic", "secret"]
+[rules.allowlist]
+paths = [
+  '''\.test\.(ts|js|tsx|jsx)$''',
+  '''\.spec\.(ts|js|tsx|jsx)$''',
+  '''__tests__/''',
+]
+regexes = ['''# gitleaks:allow''']
+
+[[rules]]
+id = "jwt"
+description = "JSON Web Token (overrides default with test-file allowlist)"
+regex = '''eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}'''
+tags = ["jwt", "secret"]
+[rules.allowlist]
+paths = [
+  '''\.test\.(ts|js|tsx|jsx)$''',
+  '''\.spec\.(ts|js|tsx|jsx)$''',
+  '''__tests__/''',
+]
+regexes = ['''# gitleaks:allow''']
+
 # Global allowlist
 [allowlist]
 paths = [

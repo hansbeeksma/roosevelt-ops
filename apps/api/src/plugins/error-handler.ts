@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 
 export async function registerErrorHandler(app: FastifyInstance): Promise<void> {
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {
     app.log.error(error)
 
     const statusCode = error.statusCode ?? 500
