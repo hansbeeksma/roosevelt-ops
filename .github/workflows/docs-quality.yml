@@ -18,7 +18,7 @@ jobs:
     name: Vale Linter
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: errata-ai/vale-action@v2
         continue-on-error: true
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -56,7 +56,7 @@ jobs:
     name: Link Checker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check internal links
         run: |
