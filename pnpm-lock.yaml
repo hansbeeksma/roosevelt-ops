@@ -180,7 +180,11 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
-  apps/web: {}
+  apps/web:
+    dependencies:
+      '@roosevelt/portal-auth':
+        specifier: workspace:*
+        version: link:../../packages/portal-auth
 
   packages/analytics-layer:
     dependencies:
