@@ -75,3 +75,8 @@ designs/assets/**/*.ai
 # Keep HTML artifacts (small, text-based)
 !designs/generated/**/*.html
 !designs/generated/**/*.css
+
+# NX
+.nx/cache
+.nx/workspace-data
+tmp/
