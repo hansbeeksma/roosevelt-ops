@@ -1,7 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createMagicLinkInvite } from '@roosevelt/portal-auth'
-import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const inviteSchema = z.object({
@@ -10,10 +9,16 @@ const inviteSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  const { userId, orgId } = await auth()
+  const { userId, orgId, orgRole } = await auth()
 
   if (!userId || !orgId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Alleen org:admin mag clients uitnodigen.
+  // Clients krijgen org:member rol — die mogen geen nieuwe invites sturen.
+  if (orgRole !== 'org:admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   let body: unknown
@@ -37,29 +42,11 @@ export async function POST(request: NextRequest) {
       projectIds,
     })
 
-    // Record access grant in Supabase for audit trail
-    const supabase = await createClient()
-    const { error: dbError } = await supabase.from('client_project_access').upsert(
-      projectIds.map((projectId) => ({
-        organization_id: orgId,
-        clerk_user_id: result.invitationId, // placeholder until webhook confirms acceptance
-        project_id: projectId,
-        granted_by: userId,
-      })),
-      { onConflict: 'organization_id,clerk_user_id,project_id', ignoreDuplicates: true },
-    )
-
-    if (dbError) {
-      console.error('Failed to record access grant:', dbError)
-      // Non-fatal — invitation already sent via Clerk
-    }
+    // Supabase audit trail wordt bijgewerkt via Clerk webhook (ROOSE-385)
+    // nadat de uitnodiging is geaccepteerd en het echte clerk_user_id beschikbaar is.
 
     return NextResponse.json({ success: true, invitationId: result.invitationId })
   } catch (error) {
-    console.error('Portal invite error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send invitation' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Failed to send invitation' }, { status: 500 })
   }
 }

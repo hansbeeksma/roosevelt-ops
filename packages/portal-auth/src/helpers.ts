@@ -21,6 +21,11 @@ export async function getPortalUser(): Promise<PortalUser | null> {
 
   const metadata = membership?.publicMetadata as Partial<PortalMembershipMetadata> | undefined
 
+  // Controleer of de magic link-toegang niet is verlopen (24u na uitnodiging)
+  if (metadata?.expiresAt && new Date(metadata.expiresAt) < new Date()) {
+    return null
+  }
+
   return {
     id: user.id,
     email: user.primaryEmailAddress?.emailAddress ?? '',
