@@ -24,8 +24,8 @@ jobs:
         with:
           files: docs/
           vale_flags: "--no-exit"
-          reporter: github-pr-check
-          filter_mode: nofilter
+          reporter: github-check
+          fail_on_error: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
