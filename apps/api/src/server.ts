@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import securityPlugin from './plugins/security.js'
 import metricsRoutes from './modules/metrics/metrics.routes.js'
 import integrationsRoutes from './modules/integrations/integrations.routes.js'
+import exactRoutes from './modules/integrations/exact.routes.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -63,6 +64,9 @@ fastify.register(metricsRoutes, { prefix: '/api/metrics' })
 
 // Integrations routes — MCP ecosystem status
 fastify.register(integrationsRoutes, { prefix: '/api/integrations' })
+
+// Exact Online OAuth routes — connect / callback / status / disconnect
+fastify.register(exactRoutes, { prefix: '/api/auth/exact' })
 
 // AI routes — strictest rate limit: 10 req/min per IP, 10 MB body limit
 fastify.register(
