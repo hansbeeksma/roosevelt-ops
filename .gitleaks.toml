@@ -85,6 +85,9 @@ paths = [
   '''yarn\.lock''',
   '''\.gitleaks\.toml''',
   '''\.github/workflows/''',
+  '''\.test\.(ts|js|tsx|jsx)$''',  # Test files may contain fake secrets
+  '''\.spec\.(ts|js|tsx|jsx)$''',  # Spec files may contain fake secrets
+  '''__tests__/''',  # Test directories
   '''docs/IDE-SECURITY-SETUP\.md''',
   '''docs/SECURITY\.md''',  # Security documentation with examples
   '''docs/SETUP\.md''',  # Setup documentation with example JWT placeholders

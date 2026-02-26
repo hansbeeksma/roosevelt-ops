@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check for secrets in .env files
         run: |
@@ -82,18 +82,27 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check Next.js security headers config
         run: |
           echo "🔍 Checking next.config.js for security headers..."
 
-          if [ ! -f "next.config.js" ] && [ ! -f "next.config.mjs" ]; then
-            echo "❌ No next.config.js found"
+          # Support monorepo layout (apps/web/) and root layout
+          CONFIG_FILE=""
+          for candidate in "apps/web/next.config.js" "apps/web/next.config.mjs" "next.config.js" "next.config.mjs"; do
+            if [ -f "$candidate" ]; then
+              CONFIG_FILE="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "❌ No next.config.js found (checked root and apps/web/)"
             exit 1
           fi
 
-          CONFIG_FILE=$([ -f "next.config.js" ] && echo "next.config.js" || echo "next.config.mjs")
+          echo "📄 Using config: $CONFIG_FILE"
 
           # Check for security headers
           REQUIRED_HEADERS=(
@@ -121,7 +130,10 @@ jobs:
 
       - name: Check for Content Security Policy
         run: |
-          CONFIG_FILE=$([ -f "next.config.js" ] && echo "next.config.js" || echo "next.config.mjs")
+          CONFIG_FILE=""
+          for candidate in "apps/web/next.config.js" "apps/web/next.config.mjs" "next.config.js" "next.config.mjs"; do
+            if [ -f "$candidate" ]; then CONFIG_FILE="$candidate"; break; fi
+          done
 
           if grep -q "Content-Security-Policy" "$CONFIG_FILE"; then
             echo "✅ CSP header configured"
@@ -134,8 +146,8 @@ jobs:
         run: |
           echo "🔍 Checking for CORS misconfigurations..."
 
-          # Check API routes for open CORS
-          CORS_ALL=$(grep -rn "Access-Control-Allow-Origin.*\*" app/api/ --include="*.ts" --include="*.js" 2>/dev/null || true)
+          # Check API routes for open CORS (monorepo: apps/web/src/app/api/, apps/web/app/api/, or legacy: app/api/)
+          CORS_ALL=$(grep -rn "Access-Control-Allow-Origin.*\*" apps/web/src/app/api/ apps/web/app/api/ app/api/ --include="*.ts" --include="*.js" 2>/dev/null || true)
 
           if [ -n "$CORS_ALL" ]; then
             echo "⚠️  CORS set to allow all origins (*) found:"
@@ -152,13 +164,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
+        uses: actions/checkout@v4
 
       - name: Check package.json security
         run: |
@@ -209,7 +215,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Check for Dockerfile
         id: check-docker

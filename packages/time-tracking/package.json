@@ -1,0 +1,12 @@
+{
+  "name": "@roosevelt/time-tracking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Time tracking domain model (ROOSE-316)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

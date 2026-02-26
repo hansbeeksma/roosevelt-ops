@@ -1,0 +1,309 @@
+{
+  "version": "1.0.0",
+  "description": "Agent HQ Workflow Definitions - Predefined multi-agent execution patterns",
+  "updated_at": "2026-02-17T00:00:00Z",
+
+  "workflows": {
+    "feature-implementation": {
+      "id": "feature-implementation",
+      "description": "End-to-end feature development with research, planning, coding, testing, and review",
+      "trigger": {
+        "labels": ["feature", "enhancement"],
+        "min_complexity": "medium"
+      },
+      "stages": [
+        {
+          "name": "research",
+          "agent": "research-agent",
+          "inputs": ["task_description", "acceptance_criteria"],
+          "outputs": ["research_report", "technical_context"],
+          "timeout_ms": 120000,
+          "optional": true
+        },
+        {
+          "name": "planning",
+          "agent": "planning-agent",
+          "inputs": ["research_report", "task_description", "acceptance_criteria"],
+          "outputs": ["implementation_plan", "subtask_breakdown"],
+          "timeout_ms": 180000,
+          "depends_on": ["research"]
+        },
+        {
+          "name": "coding",
+          "agent": "coding-agent",
+          "inputs": ["implementation_plan", "context_files"],
+          "outputs": ["code_changes", "test_files"],
+          "timeout_ms": 300000,
+          "depends_on": ["planning"],
+          "parallel_capable": true
+        },
+        {
+          "name": "code_review_gate",
+          "type": "quality_gate",
+          "gate": "code_review",
+          "inputs": ["code_changes"],
+          "on_fail": "return_to_coding",
+          "max_iterations": 3,
+          "depends_on": ["coding"]
+        },
+        {
+          "name": "testing",
+          "agent": "testing-agent",
+          "inputs": ["code_changes", "test_files"],
+          "outputs": ["test_results", "coverage_report"],
+          "timeout_ms": 180000,
+          "depends_on": ["code_review_gate"]
+        },
+        {
+          "name": "test_quality_gate",
+          "type": "quality_gate",
+          "gate": "test_quality",
+          "inputs": ["test_results", "coverage_report"],
+          "on_fail": "return_to_coding",
+          "max_iterations": 3,
+          "depends_on": ["testing"]
+        },
+        {
+          "name": "final_review",
+          "type": "quality_gate",
+          "gate": "final_review",
+          "inputs": ["code_changes", "test_results"],
+          "on_fail": "human_review",
+          "max_iterations": 1,
+          "depends_on": ["test_quality_gate"]
+        }
+      ]
+    },
+
+    "bug-fix": {
+      "id": "bug-fix",
+      "description": "Rapid bug diagnosis and fix with targeted testing",
+      "trigger": {
+        "labels": ["bug", "fix"],
+        "min_complexity": "low"
+      },
+      "stages": [
+        {
+          "name": "diagnosis",
+          "agent": "research-agent",
+          "inputs": ["bug_description", "reproduction_steps"],
+          "outputs": ["root_cause_analysis", "affected_files"],
+          "timeout_ms": 90000
+        },
+        {
+          "name": "fix",
+          "agent": "coding-agent",
+          "inputs": ["root_cause_analysis", "affected_files"],
+          "outputs": ["code_changes", "regression_tests"],
+          "timeout_ms": 180000,
+          "depends_on": ["diagnosis"]
+        },
+        {
+          "name": "review",
+          "type": "quality_gate",
+          "gate": "code_review",
+          "inputs": ["code_changes"],
+          "on_fail": "return_to_fix",
+          "max_iterations": 2,
+          "depends_on": ["fix"]
+        },
+        {
+          "name": "testing",
+          "agent": "testing-agent",
+          "inputs": ["code_changes", "regression_tests"],
+          "outputs": ["test_results"],
+          "timeout_ms": 120000,
+          "depends_on": ["review"]
+        }
+      ]
+    },
+
+    "refactoring": {
+      "id": "refactoring",
+      "description": "Code refactoring with safety-first approach",
+      "trigger": {
+        "labels": ["refactor", "tech-debt"],
+        "min_complexity": "medium"
+      },
+      "stages": [
+        {
+          "name": "analysis",
+          "agent": "review-agent",
+          "inputs": ["target_files", "refactoring_goals"],
+          "outputs": ["current_state_analysis", "risk_assessment"],
+          "timeout_ms": 120000
+        },
+        {
+          "name": "planning",
+          "agent": "planning-agent",
+          "inputs": ["current_state_analysis", "refactoring_goals"],
+          "outputs": ["refactoring_plan", "safety_checklist"],
+          "timeout_ms": 120000,
+          "depends_on": ["analysis"]
+        },
+        {
+          "name": "pre_refactor_tests",
+          "agent": "testing-agent",
+          "inputs": ["target_files"],
+          "outputs": ["baseline_test_results", "baseline_coverage"],
+          "timeout_ms": 120000,
+          "depends_on": ["planning"]
+        },
+        {
+          "name": "refactor",
+          "agent": "coding-agent",
+          "inputs": ["refactoring_plan", "safety_checklist"],
+          "outputs": ["code_changes"],
+          "timeout_ms": 300000,
+          "depends_on": ["pre_refactor_tests"]
+        },
+        {
+          "name": "review",
+          "type": "quality_gate",
+          "gate": "code_review",
+          "inputs": ["code_changes", "refactoring_plan"],
+          "on_fail": "return_to_refactor",
+          "max_iterations": 3,
+          "depends_on": ["refactor"]
+        },
+        {
+          "name": "post_refactor_tests",
+          "agent": "testing-agent",
+          "inputs": ["code_changes", "baseline_test_results"],
+          "outputs": ["test_results", "regression_comparison"],
+          "timeout_ms": 180000,
+          "depends_on": ["review"]
+        },
+        {
+          "name": "regression_gate",
+          "type": "quality_gate",
+          "gate": "test_quality",
+          "inputs": ["test_results", "regression_comparison", "baseline_coverage"],
+          "on_fail": "return_to_refactor",
+          "max_iterations": 2,
+          "depends_on": ["post_refactor_tests"]
+        }
+      ]
+    },
+
+    "documentation": {
+      "id": "documentation",
+      "description": "Documentation creation with research and review",
+      "trigger": {
+        "labels": ["docs", "documentation"],
+        "min_complexity": "low"
+      },
+      "stages": [
+        {
+          "name": "research",
+          "agent": "research-agent",
+          "inputs": ["documentation_scope", "existing_docs"],
+          "outputs": ["research_findings", "reference_materials"],
+          "timeout_ms": 90000
+        },
+        {
+          "name": "writing",
+          "agent": "coding-agent",
+          "inputs": ["research_findings", "documentation_scope"],
+          "outputs": ["documentation_files"],
+          "timeout_ms": 180000,
+          "depends_on": ["research"]
+        },
+        {
+          "name": "review",
+          "agent": "review-agent",
+          "inputs": ["documentation_files"],
+          "outputs": ["review_comments"],
+          "timeout_ms": 90000,
+          "depends_on": ["writing"]
+        }
+      ]
+    },
+
+    "security-audit": {
+      "id": "security-audit",
+      "description": "Security review with automated scanning and expert analysis",
+      "trigger": {
+        "labels": ["security", "audit"],
+        "min_complexity": "high"
+      },
+      "stages": [
+        {
+          "name": "scan",
+          "agent": "testing-agent",
+          "inputs": ["target_scope", "security_rules"],
+          "outputs": ["scan_results", "vulnerability_list"],
+          "timeout_ms": 180000
+        },
+        {
+          "name": "analysis",
+          "agent": "review-agent",
+          "inputs": ["scan_results", "vulnerability_list"],
+          "outputs": ["security_report", "remediation_plan"],
+          "timeout_ms": 180000,
+          "depends_on": ["scan"]
+        },
+        {
+          "name": "remediation",
+          "agent": "coding-agent",
+          "inputs": ["remediation_plan", "vulnerability_list"],
+          "outputs": ["code_changes", "security_tests"],
+          "timeout_ms": 300000,
+          "depends_on": ["analysis"]
+        },
+        {
+          "name": "verification",
+          "agent": "testing-agent",
+          "inputs": ["code_changes", "security_tests", "vulnerability_list"],
+          "outputs": ["verification_results"],
+          "timeout_ms": 180000,
+          "depends_on": ["remediation"]
+        },
+        {
+          "name": "final_gate",
+          "type": "quality_gate",
+          "gate": "final_review",
+          "inputs": ["verification_results", "security_report"],
+          "on_fail": "human_review",
+          "max_iterations": 1,
+          "depends_on": ["verification"]
+        }
+      ]
+    }
+  },
+
+  "workflow_selection": {
+    "rules": [
+      {
+        "condition": "labels contains 'security'",
+        "workflow": "security-audit",
+        "priority": 1
+      },
+      {
+        "condition": "labels contains 'bug' OR labels contains 'fix'",
+        "workflow": "bug-fix",
+        "priority": 2
+      },
+      {
+        "condition": "labels contains 'refactor' OR labels contains 'tech-debt'",
+        "workflow": "refactoring",
+        "priority": 3
+      },
+      {
+        "condition": "labels contains 'docs' OR labels contains 'documentation'",
+        "workflow": "documentation",
+        "priority": 4
+      },
+      {
+        "condition": "labels contains 'feature' OR labels contains 'enhancement'",
+        "workflow": "feature-implementation",
+        "priority": 5
+      },
+      {
+        "condition": "default",
+        "workflow": "feature-implementation",
+        "priority": 99
+      }
+    ]
+  }
+}

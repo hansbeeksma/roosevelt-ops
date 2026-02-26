@@ -1,0 +1,206 @@
+{
+  "version": "1.0.0",
+  "description": "Agent HQ Metrics Configuration - Defines tracked metrics, thresholds, and alerting rules",
+  "updated_at": "2026-02-17T00:00:00Z",
+
+  "metrics": {
+    "agent_utilization": {
+      "id": "agent_utilization",
+      "category": "performance",
+      "description": "Percentage of time agents spend actively executing tasks vs idle",
+      "unit": "percent",
+      "collection": "per_agent",
+      "aggregation": "average",
+      "thresholds": {
+        "target": 80,
+        "warning": 60,
+        "critical": 40
+      },
+      "formula": "(active_time / (active_time + idle_time)) * 100"
+    },
+
+    "handoff_latency": {
+      "id": "handoff_latency",
+      "category": "performance",
+      "description": "Time between agent task completion and next agent receiving assignment",
+      "unit": "milliseconds",
+      "collection": "per_handoff",
+      "aggregation": "p95",
+      "thresholds": {
+        "target": 5000,
+        "warning": 15000,
+        "critical": 30000
+      }
+    },
+
+    "gate_evaluation_time": {
+      "id": "gate_evaluation_time",
+      "category": "performance",
+      "description": "Time for quality gate evaluation to complete",
+      "unit": "milliseconds",
+      "collection": "per_gate",
+      "aggregation": "p95",
+      "thresholds": {
+        "target": 30000,
+        "warning": 60000,
+        "critical": 120000
+      }
+    },
+
+    "first_pass_rate": {
+      "id": "first_pass_rate",
+      "category": "quality",
+      "description": "Percentage of tasks passing quality gate on first attempt",
+      "unit": "percent",
+      "collection": "per_gate",
+      "aggregation": "average",
+      "thresholds": {
+        "target": 70,
+        "warning": 50,
+        "critical": 30
+      }
+    },
+
+    "rework_rate": {
+      "id": "rework_rate",
+      "category": "quality",
+      "description": "Percentage of tasks requiring revision after review",
+      "unit": "percent",
+      "collection": "per_workflow",
+      "aggregation": "average",
+      "thresholds": {
+        "target": 30,
+        "warning": 50,
+        "critical": 70
+      },
+      "note": "Lower is better - thresholds are inverted"
+    },
+
+    "defect_escape_rate": {
+      "id": "defect_escape_rate",
+      "category": "quality",
+      "description": "Issues found after final quality gate",
+      "unit": "percent",
+      "collection": "per_session",
+      "aggregation": "average",
+      "thresholds": {
+        "target": 5,
+        "warning": 10,
+        "critical": 20
+      },
+      "note": "Lower is better - thresholds are inverted"
+    },
+
+    "escalation_rate": {
+      "id": "escalation_rate",
+      "category": "reliability",
+      "description": "Percentage of tasks escalated to higher tier",
+      "unit": "percent",
+      "collection": "per_agent",
+      "aggregation": "average",
+      "thresholds": {
+        "target": 10,
+        "warning": 20,
+        "critical": 40
+      },
+      "note": "Lower is better"
+    },
+
+    "task_completion_time": {
+      "id": "task_completion_time",
+      "category": "performance",
+      "description": "End-to-end time from task assignment to completion",
+      "unit": "milliseconds",
+      "collection": "per_task",
+      "aggregation": "p50",
+      "breakdown_by": ["workflow_type", "complexity"]
+    },
+
+    "token_usage": {
+      "id": "token_usage",
+      "category": "cost",
+      "description": "Token consumption per agent and per session",
+      "unit": "tokens",
+      "collection": "per_agent",
+      "aggregation": "sum",
+      "thresholds": {
+        "per_agent_warning": 40000,
+        "per_agent_critical": 50000,
+        "batch_warning": 120000,
+        "batch_critical": 150000
+      }
+    },
+
+    "session_throughput": {
+      "id": "session_throughput",
+      "category": "performance",
+      "description": "Number of tasks completed per orchestration session",
+      "unit": "count",
+      "collection": "per_session",
+      "aggregation": "average"
+    }
+  },
+
+  "dashboards": {
+    "agent_overview": {
+      "title": "Agent HQ Overview",
+      "metrics": [
+        "agent_utilization",
+        "handoff_latency",
+        "first_pass_rate",
+        "token_usage"
+      ],
+      "refresh_interval": "per_session"
+    },
+    "quality": {
+      "title": "Quality Metrics",
+      "metrics": [
+        "first_pass_rate",
+        "rework_rate",
+        "defect_escape_rate",
+        "gate_evaluation_time"
+      ],
+      "refresh_interval": "per_session"
+    },
+    "cost": {
+      "title": "Cost and Efficiency",
+      "metrics": [
+        "token_usage",
+        "task_completion_time",
+        "session_throughput",
+        "agent_utilization"
+      ],
+      "refresh_interval": "daily"
+    }
+  },
+
+  "alerting": {
+    "channels": ["log", "cleo_note"],
+    "rules": [
+      {
+        "metric": "token_usage",
+        "condition": "per_agent > per_agent_warning",
+        "severity": "warning",
+        "action": "log_and_notify"
+      },
+      {
+        "metric": "token_usage",
+        "condition": "per_agent > per_agent_critical",
+        "severity": "critical",
+        "action": "kill_agent"
+      },
+      {
+        "metric": "escalation_rate",
+        "condition": "> critical",
+        "severity": "critical",
+        "action": "pause_orchestration"
+      },
+      {
+        "metric": "defect_escape_rate",
+        "condition": "> critical",
+        "severity": "critical",
+        "action": "tighten_gates"
+      }
+    ]
+  }
+}

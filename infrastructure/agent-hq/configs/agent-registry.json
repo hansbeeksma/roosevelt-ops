@@ -1,0 +1,285 @@
+{
+  "version": "1.0.0",
+  "description": "Agent HQ Registry - Defines all available agents, their capabilities, and routing rules",
+  "updated_at": "2026-02-17T00:00:00Z",
+
+  "agents": {
+    "orchestrator": {
+      "id": "orchestrator",
+      "type": "orchestrator",
+      "role": "orchestrator",
+      "description": "Strategic coordinator that decomposes complex tasks and delegates to specialist agents",
+      "capabilities": [
+        "task_decomposition",
+        "agent_selection",
+        "progress_tracking",
+        "escalation_handling",
+        "quality_gate_orchestration"
+      ],
+      "model_preference": "opus",
+      "max_token_budget": 100000,
+      "timeout_ms": 600000,
+      "concurrency": 1,
+      "routing_rules": {
+        "min_complexity": "high",
+        "min_subtask_count": 3,
+        "requires_cross_domain": false
+      }
+    },
+
+    "planning-manager": {
+      "id": "planning-manager",
+      "type": "manager",
+      "role": "planning-manager",
+      "description": "Breaks features into technical tasks, analyzes dependencies and risks",
+      "capabilities": [
+        "requirement_analysis",
+        "task_breakdown",
+        "dependency_mapping",
+        "risk_assessment",
+        "architecture_decisions"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 50000,
+      "timeout_ms": 300000,
+      "concurrency": 2
+    },
+
+    "execution-manager": {
+      "id": "execution-manager",
+      "type": "manager",
+      "role": "execution-manager",
+      "description": "Coordinates the coding, testing, and review cycle",
+      "capabilities": [
+        "workflow_coordination",
+        "resource_allocation",
+        "blocking_resolution",
+        "parallel_execution"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 50000,
+      "timeout_ms": 300000,
+      "concurrency": 2
+    },
+
+    "quality-manager": {
+      "id": "quality-manager",
+      "type": "manager",
+      "role": "quality-manager",
+      "description": "Oversees quality gates, collects metrics, ensures standards compliance",
+      "capabilities": [
+        "quality_gate_evaluation",
+        "metrics_collection",
+        "standards_enforcement",
+        "review_aggregation"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 50000,
+      "timeout_ms": 300000,
+      "concurrency": 1
+    },
+
+    "research-agent": {
+      "id": "research-agent",
+      "type": "specialist",
+      "role": "research",
+      "description": "Information gathering via web search, documentation, and codebase analysis",
+      "capabilities": [
+        "web_research",
+        "documentation_lookup",
+        "codebase_analysis",
+        "competitive_analysis",
+        "library_evaluation"
+      ],
+      "model_preference": "haiku",
+      "max_token_budget": 30000,
+      "timeout_ms": 120000,
+      "concurrency": 3,
+      "tools": [
+        "WebSearch",
+        "WebFetch",
+        "Grep",
+        "Glob",
+        "Read",
+        "mcp__context7__query-docs",
+        "mcp__exa__web_search_exa",
+        "mcp__perplexity__perplexity_search"
+      ]
+    },
+
+    "planning-agent": {
+      "id": "planning-agent",
+      "type": "specialist",
+      "role": "planning",
+      "description": "Creates implementation plans, identifies architecture patterns, and structures work",
+      "capabilities": [
+        "implementation_planning",
+        "architecture_design",
+        "task_structuring",
+        "dependency_analysis"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 40000,
+      "timeout_ms": 180000,
+      "concurrency": 2,
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "mcp__seq__sequentialthinking"
+      ]
+    },
+
+    "coding-agent": {
+      "id": "coding-agent",
+      "type": "specialist",
+      "role": "coding",
+      "description": "Implements code changes following specifications and plans",
+      "capabilities": [
+        "code_implementation",
+        "refactoring",
+        "bug_fixing",
+        "test_writing"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 50000,
+      "timeout_ms": 300000,
+      "concurrency": 3,
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Grep",
+        "Glob",
+        "Bash",
+        "mcp__eslint__lint-files"
+      ]
+    },
+
+    "testing-agent": {
+      "id": "testing-agent",
+      "type": "specialist",
+      "role": "testing",
+      "description": "Executes tests, validates coverage, identifies regressions",
+      "capabilities": [
+        "test_execution",
+        "coverage_analysis",
+        "regression_detection",
+        "performance_testing"
+      ],
+      "model_preference": "haiku",
+      "max_token_budget": 30000,
+      "timeout_ms": 180000,
+      "concurrency": 2,
+      "tools": [
+        "Bash",
+        "Read",
+        "Grep",
+        "mcp__playwright__browser_navigate",
+        "mcp__playwright__browser_snapshot"
+      ]
+    },
+
+    "review-agent": {
+      "id": "review-agent",
+      "type": "specialist",
+      "role": "review",
+      "description": "Reviews code quality, security, and adherence to standards",
+      "capabilities": [
+        "code_review",
+        "security_audit",
+        "style_enforcement",
+        "best_practice_validation"
+      ],
+      "model_preference": "sonnet",
+      "max_token_budget": 40000,
+      "timeout_ms": 180000,
+      "concurrency": 2,
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "mcp__eslint__lint-files"
+      ]
+    }
+  },
+
+  "quality_gates": {
+    "code_review": {
+      "trigger": "after_coding",
+      "evaluator": "review-agent",
+      "pass_criteria": {
+        "max_critical_issues": 0,
+        "max_high_issues": 2,
+        "style_compliance": true
+      },
+      "fail_action": "return_to_coding",
+      "max_iterations": 3
+    },
+    "test_quality": {
+      "trigger": "after_testing",
+      "evaluator": "quality-manager",
+      "pass_criteria": {
+        "min_coverage_percent": 80,
+        "zero_regressions": true,
+        "all_tests_pass": true
+      },
+      "fail_action": "return_to_coding",
+      "max_iterations": 3
+    },
+    "integration": {
+      "trigger": "after_all_subtasks",
+      "evaluator": "execution-manager",
+      "pass_criteria": {
+        "all_dependencies_satisfied": true,
+        "no_merge_conflicts": true,
+        "build_passes": true
+      },
+      "fail_action": "escalate_to_manager",
+      "max_iterations": 2
+    },
+    "final_review": {
+      "trigger": "before_completion",
+      "evaluator": "quality-manager",
+      "pass_criteria": {
+        "all_gates_passed": true,
+        "acceptance_criteria_met": true,
+        "documentation_updated": true
+      },
+      "fail_action": "human_review",
+      "max_iterations": 1
+    }
+  },
+
+  "routing": {
+    "complexity_thresholds": {
+      "low": {
+        "max_files": 3,
+        "max_subtasks": 1,
+        "strategy": "direct_specialist"
+      },
+      "medium": {
+        "max_files": 10,
+        "max_subtasks": 3,
+        "strategy": "manager_coordinated"
+      },
+      "high": {
+        "max_files": null,
+        "max_subtasks": null,
+        "strategy": "full_orchestration"
+      }
+    },
+    "model_selection": {
+      "orchestrator": "opus",
+      "manager": "sonnet",
+      "specialist_default": "sonnet",
+      "specialist_lightweight": "haiku"
+    },
+    "token_budgets": {
+      "per_agent_max": 50000,
+      "batch_total_max": 150000,
+      "warning_threshold": 40000,
+      "kill_threshold": 60000
+    }
+  }
+}

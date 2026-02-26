@@ -21,6 +21,19 @@ Dit project gebruikt de globale configuratie van `~/.claude/CLAUDE.md`.
 | Project UUID | c7d0b955-a97f-40b6-be03-7c05c2d0b1c3 |
 | Sync Library | `~/.cleo/lib/plane-sync.sh` |
 
+### Tech Stack
+
+| Component | Choice |
+|-----------|--------|
+| Framework | Next.js (App Router) |
+| Database | Supabase (PostgreSQL) |
+| Monitoring | Sentry + OpenTelemetry |
+| Analytics | Tremor (dashboard charts) |
+| Formatting | Biome (single quotes, no semicolons) |
+| Testing | Vitest |
+| CI/CD | GitHub Actions (13 workflows) |
+| Hosting | Vercel |
+
 ### Daily Workflow
 
 ```bash
