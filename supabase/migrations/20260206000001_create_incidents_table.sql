@@ -1,7 +1,9 @@
--- Create incidents table for incident management workflow
+-- Create ops_incidents table for incident management workflow
 -- Stores incident metadata, tracks lifecycle, and enables reporting
+-- NOTE: Renamed from 'incidents' to 'ops_incidents' to avoid conflict with
+-- the DORA metrics 'incidents' table (20260205_dora_metrics_schema.sql).
 
-CREATE TABLE IF NOT EXISTS public.incidents (
+CREATE TABLE IF NOT EXISTS public.ops_incidents (
   -- Identity
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -40,11 +42,11 @@ CREATE TABLE IF NOT EXISTS public.incidents (
 );
 
 -- Indexes for common queries
-CREATE INDEX idx_incidents_status ON public.incidents(status);
-CREATE INDEX idx_incidents_severity ON public.incidents(severity);
-CREATE INDEX idx_incidents_started_at ON public.incidents(started_at DESC);
-CREATE INDEX idx_incidents_channel_id ON public.incidents(channel_id);
-CREATE INDEX idx_incidents_plane_issue_id ON public.incidents(plane_issue_id);
+CREATE INDEX idx_ops_incidents_status ON public.ops_incidents(status);
+CREATE INDEX idx_ops_incidents_severity ON public.ops_incidents(severity);
+CREATE INDEX idx_ops_incidents_started_at ON public.ops_incidents(started_at DESC);
+CREATE INDEX idx_ops_incidents_channel_id ON public.ops_incidents(channel_id);
+CREATE INDEX idx_ops_incidents_plane_issue_id ON public.ops_incidents(plane_issue_id);
 
 -- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -55,41 +57,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_incidents_updated_at
-  BEFORE UPDATE ON public.incidents
+CREATE TRIGGER update_ops_incidents_updated_at
+  BEFORE UPDATE ON public.ops_incidents
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Row Level Security
-ALTER TABLE public.incidents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ops_incidents ENABLE ROW LEVEL SECURITY;
 
--- Policy: Allow all authenticated users to read incidents
+-- Policy: Allow all authenticated users to read ops_incidents
 CREATE POLICY "Allow authenticated read access"
-  ON public.incidents
+  ON public.ops_incidents
   FOR SELECT
   TO authenticated
   USING (true);
 
--- Policy: Allow all authenticated users to insert incidents
+-- Policy: Allow all authenticated users to insert ops_incidents
 CREATE POLICY "Allow authenticated insert access"
-  ON public.incidents
+  ON public.ops_incidents
   FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
--- Policy: Allow all authenticated users to update incidents
+-- Policy: Allow all authenticated users to update ops_incidents
 CREATE POLICY "Allow authenticated update access"
-  ON public.incidents
+  ON public.ops_incidents
   FOR UPDATE
   TO authenticated
   USING (true);
 
 -- Comments
-COMMENT ON TABLE public.incidents IS 'Incident tracking for incident management workflow';
-COMMENT ON COLUMN public.incidents.id IS 'Unique incident identifier (UUID)';
-COMMENT ON COLUMN public.incidents.severity IS 'SEV-1 (critical) to SEV-4 (low)';
-COMMENT ON COLUMN public.incidents.status IS 'active or resolved';
-COMMENT ON COLUMN public.incidents.mttr_minutes IS 'Mean Time To Resolution in minutes (auto-calculated)';
-COMMENT ON COLUMN public.incidents.channel_id IS 'Dedicated Slack channel for incident coordination';
-COMMENT ON COLUMN public.incidents.plane_issue_id IS 'Linked Plane issue for tracking action items';
-COMMENT ON COLUMN public.incidents.pagerduty_incident_id IS 'PagerDuty incident ID for on-call integration';
+COMMENT ON TABLE public.ops_incidents IS 'Ops incident tracking for incident management workflow (Slack/PagerDuty/Plane)';
+COMMENT ON COLUMN public.ops_incidents.id IS 'Unique incident identifier (UUID)';
+COMMENT ON COLUMN public.ops_incidents.severity IS 'SEV-1 (critical) to SEV-4 (low)';
+COMMENT ON COLUMN public.ops_incidents.status IS 'active or resolved';
+COMMENT ON COLUMN public.ops_incidents.mttr_minutes IS 'Mean Time To Resolution in minutes (auto-calculated)';
+COMMENT ON COLUMN public.ops_incidents.channel_id IS 'Dedicated Slack channel for incident coordination';
+COMMENT ON COLUMN public.ops_incidents.plane_issue_id IS 'Linked Plane issue for tracking action items';
+COMMENT ON COLUMN public.ops_incidents.pagerduty_incident_id IS 'PagerDuty incident ID for on-call integration';
