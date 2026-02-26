@@ -4,34 +4,32 @@ on:
   push:
     branches: [main]
     paths:
-      - 'app/**'
-      - 'lib/**'
+      - 'apps/web/**'
       - 'playwright.config.*'
   pull_request:
     branches: [main]
     paths:
-      - 'app/**'
-      - 'lib/**'
+      - 'apps/web/**'
       - 'playwright.config.*'
 
 jobs:
   e2e:
     # Only run when Playwright is configured
-    if: hashFiles('playwright.config.ts') != '' || hashFiles('playwright.config.js') != ''
+    if: hashFiles('apps/web/playwright.config.ts') != '' || hashFiles('playwright.config.ts') != ''
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -41,6 +39,10 @@ jobs:
 
       - name: Build Next.js
         run: pnpm build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Run E2E tests
         run: npx playwright test --project=chromium
