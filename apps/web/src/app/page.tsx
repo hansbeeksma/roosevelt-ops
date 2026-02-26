@@ -1,10 +1,17 @@
 import { Title, Text } from '@tremor/react'
+import dynamic from 'next/dynamic'
 import { DoraMetrics } from './components/DoraMetrics'
 import { PerformanceTier } from './components/PerformanceTier'
 import { SpaceScores } from './components/SpaceScores'
 import { SpaceSummary } from './components/SpaceSummary'
 import { DashboardSummaryCards } from './components/DashboardSummaryCards'
-import { DashboardHeader } from './components/DashboardHeader'
+
+// Clerk components (OrganizationSwitcher, UserButton) require ClerkProvider
+// context — disable SSR so they never render server-side during build.
+const DashboardHeader = dynamic(
+  () => import('./components/DashboardHeader').then((m) => m.DashboardHeader),
+  { ssr: false }
+)
 
 // Clerk components require runtime context (no static prerendering)
 export const dynamic = 'force-dynamic'
