@@ -11,7 +11,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, rateLimitHeaders } from '@/lib/rate-limiter'
 
 /** Public routes that do not require authentication */
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/api/health'])
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/health',
+  '/api/webhooks(.*)',
+])
 
 /** Production allowed origins */
 const PRODUCTION_ORIGINS = ['https://roosevelt-ops.vercel.app', 'https://rooseveltops.com']

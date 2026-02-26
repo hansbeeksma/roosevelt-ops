@@ -4,10 +4,12 @@ import { PerformanceTier } from './components/PerformanceTier'
 import { SpaceScores } from './components/SpaceScores'
 import { SpaceSummary } from './components/SpaceSummary'
 import { DashboardSummaryCards } from './components/DashboardSummaryCards'
+import { DashboardHeader } from './components/DashboardHeader'
 
 export default function DashboardPage() {
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
+      <DashboardHeader />
       <Title>Engineering Metrics Dashboard</Title>
       <Text>Roosevelt OPS - DORA + SPACE Framework</Text>
 
