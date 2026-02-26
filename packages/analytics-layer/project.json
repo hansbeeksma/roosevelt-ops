@@ -1,0 +1,10 @@
+{
+  "name": "analytics-layer",
+  "root": "packages/analytics-layer",
+  "projectType": "library",
+  "targets": {
+    "build": { "executor": "@nx/js:tsc" },
+    "test": { "executor": "@nx/vite:test" }
+  },
+  "tags": ["scope:shared", "type:lib"]
+}
