@@ -1,16 +1,16 @@
 import type { FastifyInstance } from 'fastify'
-import { createClient } from '@supabase/supabase-js'
+import { type SupabaseClient, createClient } from '@supabase/supabase-js'
 import { env } from '../lib/env.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    supabase: ReturnType<typeof createClient>
+    supabase: SupabaseClient
   }
 }
 
 export async function registerDatabase(app: FastifyInstance): Promise<void> {
-  const supabase = createClient(env.DATABASE_URL, env.CLERK_SECRET_KEY)
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
-  app.decorate('supabase', supabase)
+  app.decorate('supabase', supabase as unknown as SupabaseClient)
   app.log.info('Supabase client initialized')
 }

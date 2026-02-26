@@ -16,7 +16,7 @@ export function InviteClientForm({ projectOptions }: InviteClientFormProps) {
 
   function toggleProject(id: string) {
     setSelectedProjectIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     )
   }
 
