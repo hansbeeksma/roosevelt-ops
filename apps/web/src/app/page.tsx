@@ -6,6 +6,9 @@ import { SpaceSummary } from './components/SpaceSummary'
 import { DashboardSummaryCards } from './components/DashboardSummaryCards'
 import { DashboardHeader } from './components/DashboardHeader'
 
+// Clerk components require runtime context (no static prerendering)
+export const dynamic = 'force-dynamic'
+
 export default function DashboardPage() {
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
