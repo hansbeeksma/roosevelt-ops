@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import securityPlugin from './plugins/security.js'
 import metricsRoutes from './modules/metrics/metrics.routes.js'
 import integrationsRoutes from './modules/integrations/integrations.routes.js'
+import monitoringRoutes from './modules/monitoring/monitoring.routes.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -63,6 +64,9 @@ fastify.register(metricsRoutes, { prefix: '/api/metrics' })
 
 // Integrations routes — MCP ecosystem status
 fastify.register(integrationsRoutes, { prefix: '/api/integrations' })
+
+// Monitoring routes — health checks and liveness/readiness probes
+fastify.register(monitoringRoutes, { prefix: '/api/monitoring' })
 
 // AI routes — strictest rate limit: 10 req/min per IP, 10 MB body limit
 fastify.register(
