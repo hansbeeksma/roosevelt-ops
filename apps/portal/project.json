@@ -1,0 +1,17 @@
+{
+  "name": "portal",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/portal/src",
+  "projectType": "application",
+  "tags": ["scope:portal", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "options": { "outputPath": "dist/apps/portal" }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": { "command": "pnpm next dev --port 3002", "cwd": "apps/portal" }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@roosevelt/portal-auth",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@clerk/nextjs": "^6.38.2"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1 || ^19.0.0",
+    "next": "^14.2.0 || ^15.0.0"
+  }
+}

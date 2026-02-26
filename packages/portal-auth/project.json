@@ -1,0 +1,17 @@
+{
+  "name": "portal-auth",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/portal-auth/src",
+  "projectType": "library",
+  "tags": ["scope:portal", "type:auth"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc -p tsconfig.json", "cwd": "packages/portal-auth" }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": { "command": "biome check src/", "cwd": "packages/portal-auth" }
+    }
+  }
+}
