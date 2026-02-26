@@ -2,6 +2,9 @@
   "name": "@roosevelt/web",
   "version": "0.1.0",
   "private": true,
+  "dependencies": {
+    "@roosevelt/portal-auth": "workspace:*"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

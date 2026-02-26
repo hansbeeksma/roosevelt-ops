@@ -16,10 +16,15 @@ describe('GET /api/example', () => {
   })
 
   it('returns 404 for not-found id', async () => {
+    const originalRandom = Math.random
+    Math.random = () => 0.5 // avoid the 10% random error
+
     const request = new NextRequest('http://localhost/api/example?id=not-found', {
       headers: { authorization: 'Bearer test-token' },
     })
     const response = await GET(request)
+
+    Math.random = originalRandom
     expect(response.status).toBe(404)
   })
 
