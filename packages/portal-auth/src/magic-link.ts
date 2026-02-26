@@ -15,7 +15,7 @@ const MS_PER_HOUR = 60 * 60 * 1000
  * Clerk handles sign-in/sign-up and adds them to the organization.
  */
 export async function createMagicLinkInvite(
-  params: MagicLinkInviteParams,
+  params: MagicLinkInviteParams
 ): Promise<MagicLinkInviteResult> {
   const {
     email,
@@ -41,6 +41,6 @@ export async function createMagicLinkInvite(
   return {
     invitationId: invitation.id,
     email,
-    status: invitation.status,
+    status: invitation.status ?? 'pending',
   }
 }

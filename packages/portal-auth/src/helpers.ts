@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth, clerkClient, currentUser } from '@clerk/nextjs/server'
 import type { PortalMembershipMetadata, PortalUser } from './types'
 
 /**
@@ -15,7 +15,9 @@ export async function getPortalUser(): Promise<PortalUser | null> {
   const { orgId } = await auth()
   if (!orgId) return null
 
-  const membership = user.organizationMemberships?.find((m) => m.organization.id === orgId)
+  const clerk = await clerkClient()
+  const membershipList = await clerk.users.getOrganizationMembershipList({ userId: user.id })
+  const membership = membershipList.data.find((m) => m.organization.id === orgId)
 
   const metadata = membership?.publicMetadata as Partial<PortalMembershipMetadata> | undefined
 
