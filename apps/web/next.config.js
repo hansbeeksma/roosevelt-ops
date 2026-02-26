@@ -2,6 +2,8 @@ const { withSentryConfig } = require('@sentry/nextjs')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['@rooseveltops/analytics-layer'],
+
   experimental: {
     instrumentationHook: true,
     serverActions: {

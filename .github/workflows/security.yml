@@ -11,10 +11,14 @@ jobs:
     uses: hansbeeksma/release-infrastructure/.github/workflows/reusable-security.yml@main
     with:
       run-semgrep: true
-      run-npm-audit: true
-      run-snyk: true
+      # npm-based checks disabled: monorepo uses pnpm (no package-lock.json)
+      # TODO: update reusable-security.yml to support pnpm package manager
+      run-npm-audit: false
+      run-snyk: false
       run-sbom: true
-      run-license-check: true
+      run-license-check: false
+      # Single config to avoid shell expansion bug with space-separated rulesets
+      semgrep-rules: "p/security-audit"
     secrets: inherit
 
   notify-on-failure:
