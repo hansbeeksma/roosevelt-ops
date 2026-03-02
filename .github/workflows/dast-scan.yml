@@ -45,7 +45,7 @@ jobs:
 
       - name: ZAP Baseline Scan
         if: inputs.scan_type == 'baseline'
-        uses: zaproxy/action-baseline@v0.11.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ inputs.target_url }}
           rules_file_name: '.zap/rules.tsv'
